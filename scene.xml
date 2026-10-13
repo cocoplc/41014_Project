@@ -1,0 +1,4 @@
+<mujoco model = "ur3e scene">
+    <include file = "robot_models/ur3e/ur3e.xml"/>
+    <compiler meshdir="robot_models/ur3e/assets"/>
+</mujoco>
