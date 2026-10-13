@@ -2,12 +2,16 @@
 <mujoco model = "ur3e scene">
     <include file = "robot_models/ur3e/ur3e.xml"/>
     <compiler meshdir="robot_models/ur3e/assets"/>
+    # round friction cone for the gripper fingers
+    <option cone="elliptic" impratio="10"/>
 # create a texture and material for the ground plane (pink and white checkerboard)
     <asset>
     # create a checkerboard texture for the ground plane
         <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.95 0.3 0.6" rgb2="1 1 1" markrgb="0.8 0.8 0.8" width="300" height="300"/>
     # create a material for the ground plane using the checkerboard texture    
         <material name = "groundplane" texture = "groundplane" texrepeat = "5 5" texuniform = "true" reflectance = "0"/>
+    # declare the Robotiq 2F-85 gripper model
+        <model name="robotiq" file="robot_models/robotiq/2f85.xml"/>
     </asset>
 # create a worldbody with a light and a floor
     <worldbody>
@@ -29,6 +33,8 @@
         </body>
     # add a target ball on the table
         <body name="target_ball_body" pos="0.04 -0.29 0.145">
+        # add a free joint to allow the target ball to move freely
+            <freejoint name="target_ball_freejoint"/>
         # add a sphere to represent the target ball
             <geom name="target_ball" type="sphere" size="0.025" mass="0.06" rgba="1 0.08 0.58 1"/>
         </body>
