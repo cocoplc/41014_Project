@@ -4,12 +4,18 @@
     <compiler meshdir="robot_models/ur3e/assets"/>
 # create a texture and material for the ground plane (pink and white checkerboard)
     <asset>
-                <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.96 0.76 0.76" rgb2="1 1 1" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    # create a checkerboard texture for the ground plane
+        <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.95 0.3 0.6" rgb2="1 1 1" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    # create a material for the ground plane using the checkerboard texture    
         <material name = "groundplane" texture = "groundplane" texrepeat = "5 5" texuniform = "true" reflectance = "0"/>
     </asset>
 # create a worldbody with a light and a floor
     <worldbody>
+    # add a light source above the scene
         <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
+    # add a floor and a robot stand
         <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
+    # add a robot stand for the UR3e robot
+        <geom name="robot_stand" type="cylinder" pos="0 0 0.05" size="0.1 0.05" rgba="0.8 0.2 0.45 1"/>
   </worldbody>
 </mujoco>
