@@ -78,13 +78,21 @@ q_desired = q_start.copy()
 ball_position = data.body("target_ball_body").xpos.copy()
 
 # Aim 15 cm above the ball body's origin
-target_position = ball_position + np.array([0, 0, 0.15])
+target_position = ball_position + np.array([0, 0, 0.25])
 
 print("Ball position:", ball_position)
 print("Target position:", target_position)
 
 # Find end effector site
 site_id = model.site("attachment_site").id
+
+# ----------------------- Desired Gripper Orientation -----------------------
+
+# Read the starting orientation of the gripper
+R_desired = data.site("attachment_site").xmat.reshape(3, 3).copy()
+
+# Orientation controller gain
+K_orientation = 0.5
 
 # ----------------------- Start Simulation -----------------------
 
@@ -126,6 +134,42 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             # Desired end-effector velocity
             v_desired = Cart_pos_con * position_error
 
+            # Read current end-effector orientation
+            R_current = data.site("attachment_site").xmat.reshape(3, 3).copy()
+
+            # Calculate orientation error in world coordinates
+            R_error = R_desired @ R_current.T
+
+            # Convert rotation error into a rotation vector
+            rotation_error = np.zeros(3)
+            mujoco.mju_mat2Quat(
+                quat_error := np.zeros(4),
+                R_error.flatten()
+            )
+
+            # Shortest rotation represented as an axis-angle vector
+            if quat_error[0] < 0:
+                quat_error = -quat_error
+
+            angle = 2 * np.arctan2(
+                np.linalg.norm(quat_error[1:]),
+                quat_error[0]
+            )
+
+            axis_length = np.linalg.norm(quat_error[1:])
+
+            if axis_length > 1e-8:
+                rotation_error = angle * quat_error[1:] / axis_length
+
+            # Desired angular velocity
+            omega_desired = K_orientation * rotation_error
+
+            # Combine linear and angular velocities
+            velocity_desired = np.concatenate((
+                v_desired,
+                omega_desired
+            ))
+
             # Create Jacobian matrices
             jacp = np.zeros((3, model.nv))
             jacr = np.zeros((3, model.nv))
@@ -135,16 +179,26 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
                 model, data, jacp, jacr, site_id
             )
 
-            # Extract the robot's six joint columns
-            J_robot = jacp[:, Find_joint_vel]
+            # Combine position and rotation Jacobians
+            J_robot = np.vstack((
+                jacp[:, Find_joint_vel],
+                jacr[:, Find_joint_vel]
+            ))
 
-            # Calculate desired joint velocities
-            qdot_desired = np.linalg.pinv(J_robot) @ v_desired
+            # Calculate desired joint velocities using Damped Least Squares
+            damping = 0.05
 
-            # Limit joint velocities
-            qdot_desired = np.clip(
-                qdot_desired, -max_speed, max_speed
+            J_damped = J_robot.T @ np.linalg.inv(
+                J_robot @ J_robot.T + damping**2 * np.eye(6)
             )
+
+            qdot_desired = J_damped @ velocity_desired
+
+            # Scale all joint velocities together to preserve their ratios
+            peak_speed = np.max(np.abs(qdot_desired))
+
+            if peak_speed > max_speed:
+                qdot_desired *= max_speed / peak_speed
 
             # Convert joint velocities into joint position targets
             q_desired += qdot_desired * dt
