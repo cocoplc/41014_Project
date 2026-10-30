@@ -10,10 +10,31 @@ FOLDER = Path(__file__).resolve().parent
 model = mujoco.MjModel.from_xml_path(str(FOLDER / "scene.xml"))
 data = mujoco.MjData(model)
 
+# Display all joints in the environment
+for i in range(model.njnt):
+    name = mujoco.mj_id2name(
+        model,
+        mujoco.mjtObj.mjOBJ_JOINT,
+        i
+    )
+
+    print(
+        f"Joint {i}: {name}, "
+        f"qpos index: {model.jnt_qposadr[i]}, "
+        f"DOF index: {model.jnt_dofadr[i]}"
+    )
+
+# Display all actuators
+for i in range(model.nu):
+    print(
+        f"Actuator {i}: "
+        f"{mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_ACTUATOR, i)}"
+    )
+
 #----------------------- Identify Robot Joints -----------------------
 
 # Assumes joints match up to the 
-UR3e_joints = np.arrange(6)
+UR3e_joints = np.arange(6)
 
 # Finding Joint Positions 
 Find_joint_pos = np.array([model.jnt_qposadr[i] for i in UR3e_joints])
@@ -45,19 +66,19 @@ Kp = 100
 Kd = 20
 
 # Cartesian Position Controller - NEW
-Cart_pos_con = 0.5 # Controls how strongly it stays to end effector 
-dt = model.opt.timstep # simulation time intival for calculations 
-max_speed = 0.3 # Limits commanded cartesian movement speed 
-tolerance = 0.02 # defines acceptable position error
+Cart_pos_con = 0.5 # # Gain converting position error into desired velocity (1/s)
+dt = model.opt.timestep # Physics simulation time step (s)
+max_speed = 0.3 # Maximum commanded joint velocity (rad/s)
+tolerance = 0.005 # Acceptable end-effector position error (m)
 
 q_desired = q_start.copy()
 
 # ----------------------- Find ball target position -----------------------
 
-ball_position = data.body("ball").xpos.copy()
+ball_position = data.body("target_ball_body").xpos.copy()
 
 # Aim 15 cm above the ball body's origin
-target_position = ball_position + np.array([0, 0, 0.15])
+target_position = ball_position + np.array([0, 0, 0.25])
 
 print("Ball position:", ball_position)
 print("Target position:", target_position)
@@ -65,7 +86,17 @@ print("Target position:", target_position)
 # Find end effector site
 site_id = model.site("attachment_site").id
 
+# ----------------------- Desired Gripper Orientation -----------------------
+
+# Read the starting orientation of the gripper
+R_desired = data.site("attachment_site").xmat.reshape(3, 3).copy()
+
+# Orientation controller gain
+K_orientation = 0.5
+
 # ----------------------- Start Simulation -----------------------
+
+last_print = data.time
 
 # Open ONE viewer with the controller running
 with mujoco.viewer.launch_passive(model, data) as viewer:
@@ -81,149 +112,124 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         q = data.qpos[Find_joint_pos].copy()
         qdot = data.qvel[Find_joint_vel].copy()
 
-        # Calculate position error and damping
-        error = q_desired - q
-        tau = Kp * error - Kd * qdot
-
-        # Add gravity compensation
-        mujoco.mj_forward(model, data)
-        tau += data.qfrc_bias[:6]
-
-        # Apply actuator torque limits
-        limits = model.actuator_ctrlrange[:6]
-        tau = np.clip(tau, limits[:, 0], limits[:, 1])
-
-        # Send torque commands
-        data.ctrl[:6] = tau
-
-        # Advance the physics simulation
-        mujoco.mj_step(model, data)
-
-        # Update viewer
-        viewer.sync()
-
-        # Run approximately in real time
-        time.sleep(model.opt.timestep)
-
-# Now we add the movement to the object
-
-# Find end effector position 
-ee_position = data.site("attachment_site").xpos # Get the end-effector position in world coordinates
-print("End-effector position (X, Y, Z):", ee_position) # Display the X, Y and Z coordinates
-
-# Motion planning 
-# We now know where the end effector is
-# Lets see how far it is from the ball (off set by z = 1)
-
-# Get the cube's position in world coordinates
-ball_position = data.body("ball").xpos.copy()
-
-# Set a target position 10 cm above the cube's top
-# ball half-height is 0.05 m
-target_position = ball_position + np.array([0, 0, 0.15])
-
-# Calculate the difference between target and end effector
-position_error = target_position - ee_position
-
-# Calculate the straight-line distance to the target
-distance = np.linalg.norm(position_error)
-
-# End effector Jacobian 
-# Create an empty matrix for the position Jacobian
-jacp = np.zeros((3, model.nv))
-
-# Create an empty matrix for the orientation Jacobian
-jacr = np.zeros((3, model.nv))
-
-# Find the attachment site at the robot's end effector
-site_id = model.site("attachment_site").id
-
-# Calculate the Jacobian at the current robot pose
-mujoco.mj_jacSite(model, data, jacp, jacr, site_id)
-
-# Display the position Jacobian
-print("Position Jacobian:")
-print(jacp)
-
-# Extract the UR3e's six joint columns
-J_robot = jacp[:, 6:12]
-
-print("Robot Jacobian:")
-print(J_robot)
-
-Kp = 0.5  # Proportional gain (1/s)
-
-# Desired velocity towards the target (m/s)
-v_desired = Kp * position_error
-
-print("Desired end-effector velocity:", v_desired)
-
-# Pseudoinverse handles the non-square 3x6 Jacobian
-J_inverse = np.linalg.pinv(J_robot)
-
-# Calculate the six joint velocities (rad/s)
-qdot = J_inverse @ v_desired
-
-print("Required joint velocities:", qdot)
-
-import time
-
-# Step 11: Move the robot towards the target
-
-Kp = 0.5             # Position error gain
-dt = model.opt.timestep
-max_speed = 0.3      # Maximum joint speed in rad/s
-tolerance = 0.02     # Stop within 2 cm of target
-
-# Start with the current joint position targets
-q_target = data.qpos[7:13].copy()
-
-with mujoco.viewer.launch_passive(model, data) as viewer:
-
-    # Show the initial robot pose before moving
-    viewer.sync()
-    time.sleep(2)
-
-    while viewer.is_running():
-
-        # Get current end-effector position
+        #---------- Cartesian Controller ----------
+        # Read the end-effector position
         ee_position = data.site("attachment_site").xpos.copy()
 
-        # Calculate the remaining position error
-        error = target_position - ee_position
-        distance = np.linalg.norm(error)
+        # Calculate the position error
+        position_error = target_position - ee_position
 
-        # Stop commanding motion when close enough
-        if distance < tolerance:
+        # Calculate distance to the ball
+        distance = np.linalg.norm(position_error)
+
+        # Display progress approximately every 100 simulation steps
+        if data.time - last_print >= 100 * dt:
+            print(f"Distance to target: {distance:.4f} m")
+            last_print = data.time
+
+        if distance > tolerance:
+
+            reached = False
+
+            # Desired end-effector velocity
+            v_desired = Cart_pos_con * position_error
+
+            # Read current end-effector orientation
+            R_current = data.site("attachment_site").xmat.reshape(3, 3).copy()
+
+            # Calculate orientation error in world coordinates
+            R_error = R_desired @ R_current.T
+
+            # Convert rotation error into a rotation vector
+            rotation_error = np.zeros(3)
+            mujoco.mju_mat2Quat(
+                quat_error := np.zeros(4),
+                R_error.flatten()
+            )
+
+            # Shortest rotation represented as an axis-angle vector
+            if quat_error[0] < 0:
+                quat_error = -quat_error
+
+            angle = 2 * np.arctan2(
+                np.linalg.norm(quat_error[1:]),
+                quat_error[0]
+            )
+
+            axis_length = np.linalg.norm(quat_error[1:])
+
+            if axis_length > 1e-8:
+                rotation_error = angle * quat_error[1:] / axis_length
+
+            # Desired angular velocity
+            omega_desired = K_orientation * rotation_error
+
+            # Combine linear and angular velocities
+            velocity_desired = np.concatenate((
+                v_desired,
+                omega_desired
+            ))
+
+            # Create Jacobian matrices
+            jacp = np.zeros((3, model.nv))
+            jacr = np.zeros((3, model.nv))
+
+            # Calculate Jacobian at current pose
+            mujoco.mj_jacSite(
+                model, data, jacp, jacr, site_id
+            )
+
+            # Combine position and rotation Jacobians
+            J_robot = np.vstack((
+                jacp[:, Find_joint_vel],
+                jacr[:, Find_joint_vel]
+            ))
+
+            # Calculate desired joint velocities using Damped Least Squares
+            damping = 0.05
+
+            J_damped = J_robot.T @ np.linalg.inv(
+                J_robot @ J_robot.T + damping**2 * np.eye(6)
+            )
+
+            qdot_desired = J_damped @ velocity_desired
+
+            # Scale all joint velocities together to preserve their ratios
+            peak_speed = np.max(np.abs(qdot_desired))
+
+            if peak_speed > max_speed:
+                qdot_desired *= max_speed / peak_speed
+
+            # Convert joint velocities into joint position targets
+            q_desired += qdot_desired * dt
+
+        elif not reached:
+
             print("Target reached!")
-            break
+            reached = True
 
-        # Calculate desired end-effector velocity
-        v_desired = Kp * error
+            # Hold the reached joint position
+            q_desired = q.copy()
 
-        # Recalculate Jacobian at current pose
-        jacp = np.zeros((3, model.nv))
-        jacr = np.zeros((3, model.nv))
+        #---------- Joint Torque Controller ----------
+        # Calculate joint position error
+        error = q_desired - q
 
-        mujoco.mj_jacSite(
-            model, data, jacp, jacr,
-            model.site("attachment_site").id
-        )
+        # Proportional and derivative torque
+        tau = Kp * error - Kd * qdot
 
-        # Extract robot joint Jacobian
-        J_robot = jacp[:, 6:12]
+        # Add gravity and bias compensation
+        mujoco.mj_forward(model, data)
+        tau += data.qfrc_bias[Find_joint_vel]
 
-        # Calculate joint velocities
-        qdot = np.linalg.pinv(J_robot) @ v_desired
+        # Apply torque limits if enabled
+        for i, actuator_id in enumerate(Joint_actuator):
+            if model.actuator_ctrllimited[actuator_id]:
+                low, high = model.actuator_ctrlrange[actuator_id]
+                tau[i] = np.clip(tau[i], low, high)
 
-        # Limit joint velocities for safer testing
-        qdot = np.clip(qdot, -max_speed, max_speed)
-
-        # Convert joint velocities into position targets
-        q_target += qdot * dt
-
-        # Send position targets to the actuators
-        data.ctrl[:] = q_target
+        # Apply torque to the robot
+        data.ctrl[Joint_actuator] = tau
 
         # Advance simulation
         mujoco.mj_step(model, data)
@@ -231,10 +237,5 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         # Update viewer
         viewer.sync()
 
-        # Run approximately in real time
+        # Approximately real-time simulation
         time.sleep(dt)
-
-    # Keep viewer open to inspect the final position
-    while viewer.is_running():
-        viewer.sync()
-        time.sleep(0.02)
