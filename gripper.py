@@ -20,6 +20,17 @@ def fingers_touching(model, data, obj_geom="target_ball"):
                 right_touch = True
     return left_touch, right_touch                              # (left touching?, right touching?)
 
+def close_step(model, data, rate=1, squeeze=50, obj_geom="target_ball"):
+    grip = model.actuator("gripper_fingers_actuator").id       # gripper motor (0 = open, 255 = closed)
+    left_touch, right_touch = fingers_touching(model, data, obj_geom)   # check contacts now
+
+    if left_touch and right_touch:                              # both fingers are on the object
+        data.ctrl[grip] = min(data.ctrl[grip] + squeeze, 255)   # close a bit further so it grips firmly (max 255)
+        return True                                             # done - grasped
+
+    data.ctrl[grip] = min(data.ctrl[grip] + rate, 255)          # not touching yet, so close a little more
+    return False                                                # not grasped yet
+
 
 if __name__ == "__main__":
     model = mujoco.MjModel.from_xml_path("scene.xml")           # load scene
@@ -27,3 +38,21 @@ if __name__ == "__main__":
     mujoco.mj_forward(model, data)                              # work out positions and contacts
 
     print("touching at start:", fingers_touching(model, data))  # ball is on the table, so expect (False, False)
+
+    grip = model.actuator("gripper_fingers_actuator").id        # gripper motor
+    left = model.body("gripper_left_pad").id                    # left finger pad
+    right = model.body("gripper_right_pad").id                  # right finger pad
+    ball_q = model.jnt_qposadr[model.joint("target_ball_freejoint").id]   # ball position start in qpos
+
+    mid = (data.xpos[left] + data.xpos[right]) / 2              # point between the open pads
+    data.qpos[ball_q:ball_q+3] = mid                            # move the ball there
+    mujoco.mj_forward(model, data)                              # update positions
+
+    for step in range(2000):                                    # up to 4 s
+        data.qfrc_applied[:] = data.qfrc_bias                   # cancel gravity so nothing falls during the test
+        if close_step(model, data):                             # close a bit; True once both fingers touch
+            print(f"grasped after {step*0.002:.2f} s, gripper command = {data.ctrl[grip]:.0f}")
+            break
+        mujoco.mj_step(model, data)                             # advance physics one step
+
+    print("touching at end:", fingers_touching(model, data))    # expect (True, True)
