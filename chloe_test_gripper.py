@@ -44,7 +44,7 @@ print(f"depth range: {depth.min():.3f} to {depth.max():.3f} m")  # nearest and f
 fig, ax = plt.subplots(1, 2, figsize=(10, 4))           # make a window with 1 row x 2 plots side by side, 10 x 4 inches
 ax[0].imshow(rgb);   ax[0].set_title("wrist RGB")        # left plot: show the colour image and give it a title
 ax[1].imshow(depth); ax[1].set_title("wrist depth (m)")  # right plot: show the depth image (distance in metres) and give it a title
-plt.show()                                               # open the window so the images appear
+# plt.show()                                               # open the window so the images appear
 
 # --- place ball between the open fingers ---
 ball_jnt = model.joint("target_ball_freejoint").id   # ball's free joint
@@ -91,3 +91,23 @@ for i in range(data.ncon):                # go through every contact happening r
 print("left finger touching:", left_touch)
 print("right finger touching:", right_touch)
 print(f"gap on ball: {np.linalg.norm(data.xpos[left] - data.xpos[right])*1000:.1f} mm")  # should stop well above the 14.9 mm closed gap
+
+# --- turn gravity back on for the ball and check it stays held ---
+mid = (data.xpos[left] + data.xpos[right]) / 2              # point between the pads
+offset_start = data.xpos[ball_body] - mid                   # ball position relative to the fingers before letting go
+
+for _ in range(1000):                           # 2 s of sim time
+    data.qfrc_applied[:] = data.qfrc_bias       # keep cancelling gravity on the arm and gripper
+    data.qfrc_applied[ball_v:ball_v+6] = 0      # but not on the ball, so gravity now pulls it down
+    mujoco.mj_step(model, data)                 # advance physics one step
+
+mid = (data.xpos[left] + data.xpos[right]) / 2              # pad midpoint after 2 s
+offset_end = data.xpos[ball_body] - mid                     # ball position relative to the fingers after 2 s
+slip = np.linalg.norm(offset_end - offset_start)            # how far the ball moved within the grip (m)
+print(f"slip in grip: {slip*1000:.1f} mm")                  # should be only a few mm
+print("arm joints after:", data.qpos[:6].round(3))          # arm sags under the ball's weight - expected for now
+
+if left_touch and right_touch and slip < 0.005: # both fingers touched and ball moved less than 5 mm in the grip
+    print("PASS: ball held by finger contact")
+else:
+    print("FAIL")
