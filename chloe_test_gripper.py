@@ -1,6 +1,8 @@
 import mujoco
 import numpy as np
+import time
 import matplotlib.pyplot as plt
+import mujoco.viewer
 
 model = mujoco.MjModel.from_xml_path("scene.xml")              # load scene
 data = mujoco.MjData(model)                                     # simulation state
@@ -111,3 +113,40 @@ if left_touch and right_touch and slip < 0.005: # both fingers touched and ball 
     print("PASS: ball held by finger contact")
 else:
     print("FAIL")
+
+
+# --- watch the grasp in the viewer (same pattern as the randomise file) ---
+def run(viewer, steps, hold_ball=True):
+    for i in range(steps):
+        data.qfrc_applied[:] = data.qfrc_bias           # cancel gravity on arm and gripper
+        if not hold_ball:
+            data.qfrc_applied[ball_v:ball_v+6] = 0      # let gravity act on the ball
+        mujoco.mj_step(model, data)                     # advance physics one step
+        if i % 10 == 0:                                 # every 10 steps...
+            viewer.sync()                               # ...redraw the window
+            time.sleep(0.02)                            # ...and slow down to real speed
+
+mujoco.mj_resetData(model, data)                        # reset the scene to the start
+mujoco.mj_forward(model, data)                          # update positions so we know where the gripper is
+with mujoco.viewer.launch_passive(model, data) as viewer:   # open the viewer window
+    viewer.cam.lookat[:] = (data.xpos[left] + data.xpos[right]) / 2   # point the view at the gripper
+    viewer.cam.distance = 0.4                           # zoom in to 40 cm away
+    viewer.sync()                                       # redraw with the new view
+    time.sleep(2)                                       # give the window time to open before the action starts
+    data.ctrl[grip] = 0                                 # open the gripper
+    run(viewer, 500)                                    # 1 s
+
+    mid = (data.xpos[left] + data.xpos[right]) / 2      # point between the pads
+    data.qpos[ball_q:ball_q+3] = mid                    # move the ball there
+    data.qvel[ball_v:ball_v+6] = 0                      # ball not moving
+    mujoco.mj_forward(model, data)                      # update positions
+    viewer.sync()
+    time.sleep(1)                                       # pause so you can see the ball placed
+
+    data.ctrl[grip] = 255                               # close the gripper
+    run(viewer, 500)                                    # 1 s
+
+    run(viewer, 1000, hold_ball=False)                  # 2 s with gravity on the ball
+
+    while viewer.is_running():                          # keep the window open until you close it
+        time.sleep(0.1)          
