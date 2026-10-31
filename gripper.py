@@ -56,3 +56,22 @@ if __name__ == "__main__":
         mujoco.mj_step(model, data)                             # advance physics one step
 
     print("touching at end:", fingers_touching(model, data))    # expect (True, True)
+
+    ball_v = model.jnt_dofadr[model.joint("target_ball_freejoint").id]   # ball velocity start in qvel
+    ball_body = model.body("target_ball_body").id                         # ball body (to read its position)
+
+    for _ in range(250):                                        # 0.5 s for the extra squeeze to take effect
+        data.qfrc_applied[:] = data.qfrc_bias                   # still cancelling gravity on everything
+        mujoco.mj_step(model, data)
+
+    offset_start = data.xpos[ball_body] - (data.xpos[left] + data.xpos[right]) / 2   # ball relative to fingers before letting go
+
+    for _ in range(1000):                                       # 2 s with gravity on the ball
+        data.qfrc_applied[:] = data.qfrc_bias                   # cancel gravity on the arm and gripper
+        data.qfrc_applied[ball_v:ball_v+6] = 0                  # but not on the ball
+        mujoco.mj_step(model, data)
+
+    offset_end = data.xpos[ball_body] - (data.xpos[left] + data.xpos[right]) / 2     # ball relative to fingers after 2 s
+    slip = np.linalg.norm(offset_end - offset_start)            # how far the ball moved within the grip (m)
+    print(f"slip in grip: {slip*1000:.1f} mm")
+    print("PASS: gradual grip holds" if slip < 0.005 else "FAIL: increase squeeze")
