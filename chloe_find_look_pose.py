@@ -2,6 +2,7 @@ import time
 import mujoco
 import mujoco.viewer
 import numpy as np
+import matplotlib.pyplot as plt
 
 model = mujoco.MjModel.from_xml_path("scene.xml")              # load scene
 data = mujoco.MjData(model)                                     # simulation state
@@ -23,3 +24,19 @@ with mujoco.viewer.launch_passive(model, data) as viewer:      # open the viewer
         mujoco.mj_forward(model, data)                          # no physics, so nothing falls
         viewer.sync()
         time.sleep(0.02)
+
+renderer = mujoco.Renderer(model, 480, 640)             # off-screen renderer, 480 x 640 image
+renderer.update_scene(data, camera="wrist_camera")      # look through the wrist camera
+rgb = renderer.render()                                 # colour image
+
+renderer.enable_depth_rendering()                       # switch to depth mode
+renderer.update_scene(data, camera="wrist_camera")
+depth = renderer.render()                               # depth image in metres
+renderer.disable_depth_rendering()                      # back to colour mode
+
+print(f"depth range: {depth.min():.3f} to {depth.max():.3f} m")   # table should now be the far point, not 46 m
+
+fig, ax = plt.subplots(1, 2, figsize=(10, 4))                     # 1 row x 2 plots side by side
+ax[0].imshow(rgb); ax[0].set_title("wrist RGB at look pose")    # colour image
+ax[1].imshow(depth, vmax=1); ax[1].set_title("wrist depth (m)")           # depth, colours capped at 1 m
+plt.show()                                                        # close this window to open the viewer
