@@ -1,0 +1,4 @@
+grasped after 0.32 s, gripper command = 212
+fingers touching (left, right): (True, True)
+slip in grip after 2 s: 1.2 mm
+PASS: ball held by finger contact

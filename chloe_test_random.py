@@ -46,4 +46,6 @@ if __name__ == "__main__":
             print(f"showing seed {seed}: {pos.round(3)}")       # print which seed and where the ball is
             viewer.sync()                                       # push the new state to the viewer so it redraws
             time.sleep(2)                                       # wait 2 seconds
-            seed += 1           
+            seed += 1 
+
+          
