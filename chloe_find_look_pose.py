@@ -13,9 +13,8 @@ mujoco.mj_forward(model, data)                                  # update positio
 
 with mujoco.viewer.launch_passive(model, data) as viewer:      # open the viewer window
     while viewer.is_running():                                  # loop until you close the window
-        for _ in range(10):                                     # 10 physics steps...
-            mujoco.mj_step(model, data)
-        viewer.sync()                                           # ...then redraw
-        time.sleep(0.02)                                        # run at roughly real speed
+        mujoco.mj_forward(model, data)                          # update positions only - no physics, so no gravity
+        viewer.sync()                                           # redraw
+        time.sleep(0.02)                                        # about 50 redraws per second                                 # run at roughly real speed
 
 print("look pose:", data.qpos[:6].round(3).tolist())            # joint angles when you closed the window
