@@ -49,6 +49,23 @@ Find_joint_vel = np.array([model.jnt_dofadr[i] for i in UR3e_joints])
 # This assumes the first six actuators are torque actuators controlling these six joints.
 Joint_actuator = np.arange(6)
 
+# ----------------------- Gripper Actuator -----------------------
+
+# Actuator 6 controls the gripper fingers
+Gripper_actuator = 6
+
+# Gripper control settings
+gripper_open = 0
+gripper_closed = 255
+
+# Start with the gripper open
+gripper_command = gripper_open
+
+# Find the allowed gripper control range
+gripper_limits = model.actuator_ctrlrange[Gripper_actuator]
+
+print("Gripper control range:", gripper_limits)
+
 #----------------------- Set the UR3e starting pose -----------------------
 
 q_start = np.array([0, -1.57, 1.57, -1.57, -1.57, 0])
@@ -259,6 +276,19 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
         # Apply torque to the robot
         data.ctrl[Joint_actuator] = tau
+
+        # ----------------------- Gripper Control -----------------------
+
+        # Keep gripper open during approach and descent
+        if stage in ("APPROACH", "DESCEND"):
+            gripper_command = gripper_open
+
+        # Close gripper once descent is complete
+        elif stage == "READY_TO_GRASP":
+            gripper_command = gripper_closed
+
+        # Send command to gripper actuator
+        data.ctrl[Gripper_actuator] = gripper_command
 
         # Advance simulation
         mujoco.mj_step(model, data)
