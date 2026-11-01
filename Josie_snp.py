@@ -12,11 +12,7 @@ data = mujoco.MjData(model)
 
 # Display all joints in the environment
 for i in range(model.njnt):
-    name = mujoco.mj_id2name(
-        model,
-        mujoco.mjtObj.mjOBJ_JOINT,
-        i
-    )
+    name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, i)
 
     print(
         f"Joint {i}: {name}, "
@@ -175,19 +171,13 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
             # Convert rotation error into a rotation vector
             rotation_error = np.zeros(3)
-            mujoco.mju_mat2Quat(
-                quat_error := np.zeros(4),
-                R_error.flatten()
-            )
+            mujoco.mju_mat2Quat(quat_error := np.zeros(4), R_error.flatten())
 
             # Shortest rotation represented as an axis-angle vector
             if quat_error[0] < 0:
                 quat_error = -quat_error
 
-            angle = 2 * np.arctan2(
-                np.linalg.norm(quat_error[1:]),
-                quat_error[0]
-            )
+            angle = 2 * np.arctan2(np.linalg.norm(quat_error[1:]), quat_error[0])
 
             axis_length = np.linalg.norm(quat_error[1:])
 
@@ -198,19 +188,14 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             omega_desired = K_orientation * rotation_error
 
             # Combine linear and angular velocities
-            velocity_desired = np.concatenate((
-                v_desired,
-                omega_desired
-            ))
+            velocity_desired = np.concatenate((v_desired, omega_desired))
 
             # Create Jacobian matrices
             jacp = np.zeros((3, model.nv))
             jacr = np.zeros((3, model.nv))
 
             # Calculate Jacobian at current pose
-            mujoco.mj_jacSite(
-                model, data, jacp, jacr, site_id
-            )
+            mujoco.mj_jacSite(model, data, jacp, jacr, site_id)
 
             # Combine position and rotation Jacobians
             J_robot = np.vstack((
