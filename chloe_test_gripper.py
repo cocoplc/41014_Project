@@ -15,6 +15,7 @@ left = model.body("gripper_left_pad").id # left finger pad
 right = model.body("gripper_right_pad").id # right finger pad
 
 data.ctrl[grip] = 255    # set gripper command to fully closed (0 = open, 255 = closed)
+mujoco.mj_forward(model, data) # compute gravity forces before the first step
 
 for _ in range(500):   # repeat 500 times = 1 s of sim time (0.002 s per step)
     data.qfrc_applied[:] = data.qfrc_bias  # push back against gravity on every joint so the arm stays still 

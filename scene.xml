@@ -31,12 +31,11 @@
             <geom name="leg_3" type="cylinder" pos=" 0.16 -0.13 0.05" size="0.012 0.05" rgba="1 0.82 0.88 1"/>
             <geom name="leg_4" type="cylinder" pos="-0.16 -0.13 0.05" size="0.012 0.05" rgba="1 0.82 0.88 1"/>   
         </body>
-    # add a target ball on the table
-        <body name="target_ball_body" pos="0.04 -0.29 0.145">
-        # add a free joint to allow the target ball to move freely
+            <body name="target_ball_body" pos="0.04 -0.29 0.145">
+            <!-- free joint so the cube can move freely -->
             <freejoint name="target_ball_freejoint"/>
-        # add a sphere to represent the target ball
-            <geom name="target_ball" type="sphere" size="0.025" mass="0.06" rgba="1 0.08 0.58 1"/>
+            <!-- 5 cm cube (size = half-lengths) -->
+            <geom name="target_ball" type="box" size="0.025 0.025 0.025" mass="0.06" rgba="1 0.08 0.58 1"/>
         </body>
     </worldbody>
 </mujoco>
