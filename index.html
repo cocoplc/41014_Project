@@ -1,274 +1,342 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="description"
-        content="41014 Sensors and Control for Mechatronic Systems – UR3 vision-guided pick in MuJoCo using a wrist-mounted RGB-D camera.">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>41014 Project: UR3 Vision-Guided Pick in MuJoCo</title>
+  <meta name="description" content="41014 Sensors and Control for Mechatronic Systems – UR3 vision-guided pick in MuJoCo using a wrist-mounted RGB-D camera.">
+  <title>41014 Project: UR3 Vision-Guided Pick</title>
 
-  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
   <style>
     :root {
-      --accent: #0f62fe;
-      --accent-soft: #e8f0ff;
-      --ink: #1b1f24;
-      --muted: #5b6470;
+      --bg: #070b14;
+      --bg-2: #0c1220;
+      --card: rgba(255,255,255,0.035);
+      --line: rgba(255,255,255,0.08);
+      --text: #e8edf6;
+      --muted: #8a96ab;
+      --cyan: #3ee6ff;
+      --violet: #8b7bff;
+      --grad: linear-gradient(120deg, var(--cyan), var(--violet));
     }
-    body { font-family: 'Noto Sans', sans-serif; color: var(--ink); }
-    h1, h2, h3, .title { font-family: 'Google Sans', sans-serif; }
-
-    .hero.top {
-      background: linear-gradient(135deg, #0b1d3a 0%, #13315c 55%, #0f62fe 100%);
-      color: #fff;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
+      line-height: 1.7; -webkit-font-smoothing: antialiased;
     }
-    .hero.top .title { color: #fff; font-size: 2.8rem; line-height: 1.2; }
-    .hero.top .subtitle { color: #cfdcf2; margin-top: 1rem !important; }
-    .authors { font-size: 1.15rem; margin-top: 1.25rem; color: #fff; }
-    .affil { color: #b8c7e0; margin-top: .4rem; }
-    .tag-chip {
-      display: inline-block; padding: .3rem .8rem; border-radius: 999px;
-      background: rgba(255,255,255,.12); color: #fff; font-size: .85rem; margin-bottom: 1rem;
+    a { color: inherit; text-decoration: none; }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; line-height: 1.15; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+    /* Nav */
+    nav {
+      position: sticky; top: 0; z-index: 10; backdrop-filter: blur(14px);
+      background: rgba(7,11,20,0.7); border-bottom: 1px solid var(--line);
     }
-    .links { margin-top: 1.75rem; }
-    .links .button { margin: .3rem; border-radius: 999px; }
+    nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    .brand { font-family: 'JetBrains Mono', monospace; font-size: .9rem; color: var(--cyan); }
+    .nav-links { display: flex; gap: 28px; font-size: .9rem; color: var(--muted); }
+    .nav-links a:hover { color: var(--text); }
+    @media (max-width: 720px) { .nav-links { display: none; } }
 
-    .section-title { font-size: 1.9rem; margin-bottom: 1.25rem !important; }
-    .lead { font-size: 1.1rem; color: var(--muted); line-height: 1.75; }
+    /* Hero */
+    .hero { position: relative; overflow: hidden; padding: 120px 0 100px; text-align: center; }
+    .hero::before {
+      content: ""; position: absolute; inset: 0;
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+    }
+    .glow {
+      position: absolute; width: 620px; height: 620px; border-radius: 50%; filter: blur(120px);
+      opacity: .28; top: -200px; left: 50%; transform: translateX(-50%);
+      background: var(--grad);
+    }
+    .hero .wrap { position: relative; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px;
+      border: 1px solid var(--line); background: var(--card); font-size: .8rem; color: var(--muted);
+    }
+    .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+    .hero h1 { font-size: clamp(2.4rem, 6vw, 4.2rem); font-weight: 700; margin: 26px 0 18px; letter-spacing: -0.02em; }
+    .hero h1 span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p.sub { font-size: 1.15rem; color: var(--muted); max-width: 620px; margin: 0 auto; }
+    .authors { margin-top: 34px; font-size: .98rem; }
+    .authors span { color: var(--text); }
+    .authors .sep { color: var(--violet); margin: 0 10px; }
+    .affil { color: var(--muted); font-size: .9rem; margin-top: 6px; }
+    .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 38px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 9px; padding: 12px 22px; border-radius: 10px;
+      font-weight: 500; font-size: .95rem; border: 1px solid var(--line); background: var(--card);
+      transition: all .2s;
+    }
+    .btn:hover { border-color: var(--cyan); transform: translateY(-2px); }
+    .btn.primary { background: var(--grad); color: #050810; border: none; }
+    .btn.primary:hover { box-shadow: 0 8px 30px rgba(62,230,255,.3); }
 
-    .media-box { border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
-    .media-box img, .media-box video { display: block; width: 100%; }
+    /* Sections */
+    section.block { padding: 96px 0; border-top: 1px solid var(--line); }
+    .label { font-family: 'JetBrains Mono', monospace; font-size: .8rem; color: var(--cyan); letter-spacing: .08em; text-transform: uppercase; }
+    .block h2 { font-size: clamp(1.8rem, 4vw, 2.5rem); margin: 10px 0 18px; letter-spacing: -0.01em; }
+    .lead { color: var(--muted); font-size: 1.08rem; max-width: 720px; }
 
+    .media {
+      margin-top: 40px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line);
+      box-shadow: 0 30px 80px rgba(0,0,0,.5);
+    }
+    .media img, .media video { display: block; width: 100%; }
+
+    /* Pipeline */
+    .pipeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 48px; position: relative; }
+    .pipeline::before {
+      content: ""; position: absolute; top: 34px; left: 10%; right: 10%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--violet), transparent); opacity: .5;
+    }
     .step {
-      height: 100%; padding: 1.5rem; border-radius: 12px; background: #fff;
-      border: 1px solid #e3e7ee; transition: transform .15s, box-shadow .15s;
+      position: relative; padding: 24px 20px; border-radius: 14px; background: var(--bg-2);
+      border: 1px solid var(--line); transition: all .25s;
     }
-    .step:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(15,98,254,.12); }
-    .step .num {
-      width: 2.3rem; height: 2.3rem; border-radius: 50%; display: flex; align-items: center;
-      justify-content: center; background: var(--accent-soft); color: var(--accent);
-      font-weight: 700; margin-bottom: .8rem;
+    .step:hover { border-color: rgba(62,230,255,.4); transform: translateY(-4px); }
+    .step .ico {
+      width: 22px; height: 22px; margin-bottom: 18px; color: var(--cyan); font-size: 1.2rem;
     }
-    .step h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: .4rem; }
-    .step p { color: var(--muted); font-size: .95rem; }
+    .step .n { font-family: 'JetBrains Mono', monospace; font-size: .75rem; color: var(--muted); }
+    .step h3 { font-size: 1.05rem; margin: 6px 0 8px; }
+    .step p { font-size: .88rem; color: var(--muted); line-height: 1.6; }
+    @media (max-width: 900px) {
+      .pipeline { grid-template-columns: 1fr 1fr; }
+      .pipeline::before { display: none; }
+    }
+    @media (max-width: 520px) { .pipeline { grid-template-columns: 1fr; } }
 
-    .alt { background: #f6f8fb; }
+    /* Two-col */
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 48px; }
+    .panel { padding: 28px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+    .panel h3 { font-size: 1.25rem; margin-bottom: 10px; }
+    .panel p { color: var(--muted); font-size: .95rem; }
+    .panel .media { margin-top: 22px; box-shadow: none; }
+    @media (max-width: 800px) { .split { grid-template-columns: 1fr; } }
 
+    /* Team */
+    .team { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 48px; }
     .member {
-      padding: 1.5rem; border-radius: 12px; background: #fff; border: 1px solid #e3e7ee; height: 100%;
+      padding: 26px 22px; border-radius: 16px; background: var(--card); border: 1px solid var(--line);
+      transition: all .25s;
     }
-    .member .avatar {
-      width: 3rem; height: 3rem; border-radius: 50%; background: var(--accent); color: #fff;
-      display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: .8rem;
+    .member:hover { border-color: rgba(139,123,255,.45); }
+    .avatar {
+      width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center;
+      background: var(--grad); color: #050810; font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      margin-bottom: 18px;
     }
-    .member h3 { font-size: 1.1rem; font-weight: 600; }
-    .member .role { color: var(--accent); font-size: .9rem; margin-bottom: .5rem; }
-    .member p { color: var(--muted); font-size: .95rem; }
+    .member h3 { font-size: 1.05rem; }
+    .member .role { font-family: 'JetBrains Mono', monospace; font-size: .75rem; color: var(--cyan); margin: 4px 0 12px; }
+    .member p { font-size: .88rem; color: var(--muted); line-height: 1.6; }
+    @media (max-width: 900px) { .team { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 520px) { .team { grid-template-columns: 1fr; } }
 
-    pre { background: #0b1d3a; color: #e6edf7; border-radius: 12px; padding: 1.25rem 1.5rem; font-size: .9rem; }
-    pre .c { color: #7f93b5; }
+    /* Code */
+    .terminal { margin-top: 40px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #05080f; }
+    .terminal .bar { display: flex; gap: 7px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+    .terminal .bar i { width: 11px; height: 11px; border-radius: 50%; display: block; }
+    .terminal pre { padding: 22px 24px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: .88rem; line-height: 1.9; color: var(--text); }
+    .terminal .p { color: var(--cyan); user-select: none; }
+    .terminal .c { color: #56627a; }
 
-    .footer { background: #0b1d3a; color: #b8c7e0; padding: 2.5rem 1.5rem; }
-    .footer a { color: #fff; text-decoration: underline; }
+    footer { padding: 48px 0; border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: .85rem; }
+    footer a { color: var(--text); border-bottom: 1px solid var(--line); }
   </style>
 </head>
 <body>
 
-<!-- Header -->
-<section class="hero top">
-  <div class="hero-body">
-    <div class="container is-max-desktop has-text-centered">
-      <span class="tag-chip">41014 Sensors and Control · Assessment 4 · Track B</span>
-      <h1 class="title">UR3 Vision-Guided Pick in MuJoCo</h1>
-      <p class="subtitle">Finding and grasping a randomly placed ball with a wrist-mounted RGB-D camera</p>
-      <div class="authors">Chloe Sargiss · Hannah Murphy · Angus Tedeschi · Josephine Thu</div>
-      <div class="affil">University of Technology Sydney</div>
-      <div class="links">
-        <a href="https://github.com/cocoplc/41014_Project" class="button is-white is-outlined">
-          <span class="icon"><i class="fab fa-github"></i></span><span>Code</span>
-        </a>
-        <a href="https://github.com/cocoplc/41014_Project/tree/main/results" class="button is-white is-outlined">
-          <span class="icon"><i class="fas fa-chart-line"></i></span><span>Results</span>
-        </a>
-        <a href="https://github.com/cocoplc/41014_Project/tree/main/evidence" class="button is-white is-outlined">
-          <span class="icon"><i class="far fa-images"></i></span><span>Evidence</span>
-        </a>
-      </div>
+<nav>
+  <div class="wrap">
+    <div class="brand">41014_project</div>
+    <div class="nav-links">
+      <a href="#overview">Overview</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="#results">Results</a>
+      <a href="#team">Team</a>
+      <a href="#run">Run</a>
     </div>
   </div>
-</section>
+</nav>
 
-<!-- Overview -->
-<section class="section">
-  <div class="container is-max-desktop">
-    <h2 class="title section-title has-text-centered">Overview</h2>
-    <p class="lead has-text-centered">
+<header class="hero">
+  <div class="glow"></div>
+  <div class="wrap">
+    <div class="chip"><span class="dot"></span>41014 Sensors &amp; Control · Assessment 4 · Track B</div>
+    <h1>UR3 <span>Vision-Guided Pick</span><br>in MuJoCo</h1>
+    <p class="sub">Finding and grasping a randomly placed ball using a wrist-mounted RGB-D camera, a Kalman filter and visual servoing.</p>
+    <div class="authors">
+      <span>Chloe Sargiss</span><span class="sep">/</span>
+      <span>Hannah Murphy</span><span class="sep">/</span>
+      <span>Angus Tedeschi</span><span class="sep">/</span>
+      <span>Josephine Thu</span>
+    </div>
+    <div class="affil">University of Technology Sydney</div>
+    <div class="btns">
+      <a class="btn primary" href="https://github.com/cocoplc/41014_Project"><i class="fab fa-github"></i>View Code</a>
+      <a class="btn" href="https://github.com/cocoplc/41014_Project/tree/main/results"><i class="fas fa-chart-line"></i>Results</a>
+      <a class="btn" href="https://github.com/cocoplc/41014_Project/tree/main/evidence"><i class="far fa-images"></i>Evidence</a>
+    </div>
+  </div>
+</header>
+
+<section class="block" id="overview">
+  <div class="wrap">
+    <div class="label">01 — Overview</div>
+    <h2>Sense, estimate, control.</h2>
+    <p class="lead">
       A ball is placed at a random position on a table. The UR3 moves to a look pose, localises the
-      ball with its wrist RGB-D camera, estimates its own joint state with a Kalman filter, and uses
-      state-space control and visual servoing to reach in and grasp it, bringing together sensing,
-      estimation and control from 41014 in one closed loop.
+      ball with its wrist RGB-D camera, estimates its own joint state with a Kalman filter, then uses
+      state-space control and visual servoing to reach in and grasp it, closing the loop between
+      sensing and action.
     </p>
-    <div class="media-box" style="margin-top:2rem;">
-      <video autoplay muted loop playsinline onerror="this.parentElement.style.display='none'">
+    <div class="media">
+      <video autoplay muted loop playsinline>
         <source src="./static/videos/pick_demo.mp4" type="video/mp4"
-                onerror="this.closest('.media-box').style.display='none'">
+                onerror="this.closest('.media').style.display='none'">
       </video>
     </div>
   </div>
 </section>
 
-<!-- Pipeline -->
-<section class="section alt">
-  <div class="container">
-    <h2 class="title section-title has-text-centered">System Pipeline</h2>
-    <div class="columns is-multiline is-centered">
-      <div class="column is-one-fifth-desktop is-half-tablet">
-        <div class="step">
-          <div class="num">1</div>
-          <h3>Scene Setup</h3>
-          <p>UR3, table, gripper, wrist camera and a randomly placed ball in MuJoCo.</p>
+<section class="block" id="pipeline">
+  <div class="wrap">
+    <div class="label">02 — Pipeline</div>
+    <h2>From pixels to grasp.</h2>
+    <p class="lead">Five stages take the robot from a fresh random scene to a secure hold on the ball.</p>
+    <div class="pipeline">
+      <div class="step">
+        <div class="ico"><i class="fas fa-cube"></i></div>
+        <div class="n">01</div>
+        <h3>Scene Setup</h3>
+        <p>UR3, table, gripper, wrist camera and a randomly placed ball.</p>
+      </div>
+      <div class="step">
+        <div class="ico"><i class="fas fa-camera"></i></div>
+        <div class="n">02</div>
+        <h3>RGB-D Vision</h3>
+        <p>Colour and depth locate the ball in 3D.</p>
+      </div>
+      <div class="step">
+        <div class="ico"><i class="fas fa-wave-square"></i></div>
+        <div class="n">03</div>
+        <h3>Estimation</h3>
+        <p>A Kalman filter estimates joint states from noisy readings.</p>
+      </div>
+      <div class="step">
+        <div class="ico"><i class="fas fa-route"></i></div>
+        <div class="n">04</div>
+        <h3>Control</h3>
+        <p>State-space control and visual servoing drive the gripper in.</p>
+      </div>
+      <div class="step">
+        <div class="ico"><i class="fas fa-hand"></i></div>
+        <div class="n">05</div>
+        <h3>Grasp</h3>
+        <p>The gripper closes gradually and holds the ball.</p>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="panel">
+        <h3>Simulation Scene</h3>
+        <p>Each run resets with a new random ball position, and the robot starts from a fixed look pose so the ball is in view.</p>
+        <div class="media">
+          <img src="./static/images/scene.png" alt="MuJoCo scene" onerror="this.parentElement.style.display='none'">
         </div>
       </div>
-      <div class="column is-one-fifth-desktop is-half-tablet">
-        <div class="step">
-          <div class="num">2</div>
-          <h3>RGB-D Vision</h3>
-          <p>Colour and depth images locate the ball and give its 3D position.</p>
-        </div>
-      </div>
-      <div class="column is-one-fifth-desktop is-half-tablet">
-        <div class="step">
-          <div class="num">3</div>
-          <h3>State Estimation</h3>
-          <p>A Kalman filter estimates joint states from noisy measurements.</p>
-        </div>
-      </div>
-      <div class="column is-one-fifth-desktop is-half-tablet">
-        <div class="step">
-          <div class="num">4</div>
-          <h3>Control &amp; Planning</h3>
-          <p>State-space control and visual servoing drive the gripper to the ball.</p>
-        </div>
-      </div>
-      <div class="column is-one-fifth-desktop is-half-tablet">
-        <div class="step">
-          <div class="num">5</div>
-          <h3>Grasp</h3>
-          <p>The gripper closes gradually and holds the ball securely.</p>
+      <div class="panel">
+        <h3>Vision Localisation</h3>
+        <p>The wrist camera's RGB and depth images are combined to find the ball's position relative to the robot.</p>
+        <div class="media">
+          <img src="./static/images/vision.png" alt="Wrist camera view" onerror="this.parentElement.style.display='none'">
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Scene + Vision -->
-<section class="section">
-  <div class="container is-max-desktop">
-    <div class="columns">
-      <div class="column">
-        <h2 class="title is-4">Simulation Scene</h2>
-        <p class="lead" style="font-size:1rem;">
-          Each run resets the scene with a new random ball position, and the robot starts from a
-          fixed look pose so the ball is in view.
-        </p>
-        <div class="media-box" style="margin-top:1rem;">
-          <img src="./static/images/scene.png" alt="MuJoCo scene"
-               onerror="this.parentElement.style.display='none'">
-        </div>
-      </div>
-      <div class="column">
-        <h2 class="title is-4">Vision Localisation</h2>
-        <p class="lead" style="font-size:1rem;">
-          The wrist camera's RGB and depth images are combined to find the ball's position
-          relative to the robot.
-        </p>
-        <div class="media-box" style="margin-top:1rem;">
-          <img src="./static/images/vision.png" alt="Wrist camera view"
-               onerror="this.parentElement.style.display='none'">
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Results -->
-<section class="section alt">
-  <div class="container is-max-desktop">
-    <h2 class="title section-title has-text-centered">Results</h2>
-    <p class="lead has-text-centered">
+<section class="block" id="results">
+  <div class="wrap">
+    <div class="label">03 — Results</div>
+    <h2>How well does it see?</h2>
+    <p class="lead">
       Vision localisation was evaluated over many random ball positions by comparing the estimated
       position with the simulator's ground truth.
     </p>
-    <div class="media-box" style="margin-top:2rem;">
-      <img src="./static/images/results.png" alt="Localisation results"
-           onerror="this.parentElement.style.display='none'">
+    <div class="media">
+      <img src="./static/images/results.png" alt="Localisation results" onerror="this.parentElement.style.display='none'">
     </div>
   </div>
 </section>
 
-<!-- Team -->
-<section class="section">
-  <div class="container">
-    <h2 class="title section-title has-text-centered">Team</h2>
-    <div class="columns is-multiline">
-      <div class="column is-3-desktop is-half-tablet">
-        <div class="member">
-          <div class="avatar">CS</div>
-          <h3>Chloe Sargiss</h3>
-          <div class="role">Simulation &amp; Robot Setup</div>
-          <p>MuJoCo scene, UR3, gripper and wrist camera; random ball positioning.</p>
-        </div>
+<section class="block" id="team">
+  <div class="wrap">
+    <div class="label">04 — Team</div>
+    <h2>Who built what.</h2>
+    <div class="team">
+      <div class="member">
+        <div class="avatar">CS</div>
+        <h3>Chloe Sargiss</h3>
+        <div class="role">sim &amp; robot setup</div>
+        <p>MuJoCo scene, UR3, gripper and wrist camera; random ball positioning.</p>
       </div>
-      <div class="column is-3-desktop is-half-tablet">
-        <div class="member">
-          <div class="avatar">HM</div>
-          <h3>Hannah Murphy</h3>
-          <div class="role">Vision &amp; Localisation</div>
-          <p>RGB-D ball detection, 3D localisation and vision evaluation.</p>
-        </div>
+      <div class="member">
+        <div class="avatar">HM</div>
+        <h3>Hannah Murphy</h3>
+        <div class="role">vision &amp; localisation</div>
+        <p>RGB-D ball detection, 3D localisation and vision evaluation.</p>
       </div>
-      <div class="column is-3-desktop is-half-tablet">
-        <div class="member">
-          <div class="avatar">AT</div>
-          <h3>Angus Tedeschi</h3>
-          <div class="role">Control &amp; Estimation</div>
-          <p>State-space control and Kalman filter observer.</p>
-        </div>
+      <div class="member">
+        <div class="avatar">AT</div>
+        <h3>Angus Tedeschi</h3>
+        <div class="role">control &amp; estimation</div>
+        <p>State-space control and Kalman filter observer.</p>
       </div>
-      <div class="column is-3-desktop is-half-tablet">
-        <div class="member">
-          <div class="avatar">JT</div>
-          <h3>Josephine Thu</h3>
-          <div class="role">Servoing &amp; Planning</div>
-          <p>Visual servoing, planning and the full pick sequence.</p>
-        </div>
+      <div class="member">
+        <div class="avatar">JT</div>
+        <h3>Josephine Thu</h3>
+        <div class="role">servoing &amp; planning</div>
+        <p>Visual servoing, planning and the full pick sequence.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Run -->
-<section class="section alt">
-  <div class="container is-max-desktop">
-    <h2 class="title section-title has-text-centered">Run It</h2>
-<pre><code>git clone https://github.com/cocoplc/41014_Project.git
-cd 41014_Project
-pip install mujoco numpy opencv-python matplotlib
+<section class="block" id="run">
+  <div class="wrap">
+    <div class="label">05 — Run It</div>
+    <h2>Try it yourself.</h2>
+    <div class="terminal">
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
+<pre><span class="p">$ </span>git clone https://github.com/cocoplc/41014_Project.git
+<span class="p">$ </span>cd 41014_Project
+<span class="p">$ </span>pip install mujoco numpy opencv-python matplotlib
 
-python scene_setup.py       <span class="c"># scene with look pose and random ball</span>
-python Josie_snp.py         <span class="c"># full pick</span>
-python evaluate_vision.py   <span class="c"># vision localisation evaluation</span></code></pre>
+<span class="p">$ </span>python scene_setup.py       <span class="c"># scene with look pose and random ball</span>
+<span class="p">$ </span>python Josie_snp.py         <span class="c"># full pick</span>
+<span class="p">$ </span>python evaluate_vision.py   <span class="c"># vision localisation evaluation</span></pre>
+    </div>
   </div>
 </section>
 
-<footer class="footer has-text-centered">
-  <p>
-    Website template borrowed from <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a>,
-    licensed under <a href="http://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
-  </p>
+<footer>
+  <div class="wrap">
+    41014 Sensors and Control for Mechatronic Systems · UTS · 2026<br>
+    Template adapted from <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a>, licensed under <a href="http://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
+  </div>
 </footer>
 
 </body>
