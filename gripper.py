@@ -1,51 +1,77 @@
 import mujoco
 import numpy as np
 
-BALL_GEOM = "target_ball"                                           # ball geom in scene.xml
-GRIPPER = "gripper_fingers_actuator"                                # gripper actuator in scene.xml
-LEFT_PADS = ["gripper_left_pad", "gripper_left_silicone_pad"]       # left pad bodies
-RIGHT_PADS = ["gripper_right_pad", "gripper_right_silicone_pad"]    # right pad bodies
 
+def fingers_touching(model, data, obj_geom="target_ball"):
+    obj = model.geom(obj_geom).id                                                           # the object's geom
+    left_bodies = [model.body("gripper_left_pad").id, model.body("gripper_left_silicone_pad").id]     # left pad + silicone
+    right_bodies = [model.body("gripper_right_pad").id, model.body("gripper_right_silicone_pad").id]  # right pad + silicone
 
-def fingers_touching(model, data, obj_geom=BALL_GEOM):
-    obj = model.geom(obj_geom).id                                   # the object's geom
-    left = [model.body(pad).id for pad in LEFT_PADS]                # left pad + silicone
-    right = [model.body(pad).id for pad in RIGHT_PADS]              # right pad + silicone
-
-    left_touch = False
+    left_touch = False                                          # assume no contact until we find one
     right_touch = False
-    for i in range(data.ncon):                                      # every contact right now
+    for i in range(data.ncon):                                  # go through every contact happening right now
         c = data.contact[i]
-        if c.geom1 == obj or c.geom2 == obj:                        # is the object in this contact?
-            other = c.geom2 if c.geom1 == obj else c.geom1          # the geom it's touching
-            body = model.geom_bodyid[other]                         # which body that geom belongs to
-            if body in left:
+        if c.geom1 == obj or c.geom2 == obj:                    # is the object part of this contact?
+            other = c.geom2 if c.geom1 == obj else c.geom1      # the geom the object is touching
+            body = model.geom_bodyid[other]                     # which body that geom belongs to
+            if body in left_bodies:
                 left_touch = True
-            if body in right:
+            if body in right_bodies:
                 right_touch = True
-    return left_touch, right_touch
+    return left_touch, right_touch                              # (left touching?, right touching?)
+
+def close_step(model, data, rate=1, squeeze=50, obj_geom="target_ball"):
+    grip = model.actuator("gripper_fingers_actuator").id       # gripper motor (0 = open, 255 = closed)
+    left_touch, right_touch = fingers_touching(model, data, obj_geom)   # check contacts now
+
+    if left_touch and right_touch:                              # both fingers are on the object
+        data.ctrl[grip] = min(data.ctrl[grip] + squeeze, 255)   # close a bit further so it grips firmly (max 255)
+        return True                                             # done - grasped
+
+    data.ctrl[grip] = min(data.ctrl[grip] + rate, 255)          # not touching yet, so close a little more
+    return False                                                # not grasped yet
 
 
-def close_step(model, data, rate=1, squeeze=50, obj_geom=BALL_GEOM):
-    grip = model.actuator(GRIPPER).id                               # 0 = open, 255 = closed
-    left_touch, right_touch = fingers_touching(model, data, obj_geom)
+if __name__ == "__main__":
+    model = mujoco.MjModel.from_xml_path("scene.xml")           # load scene
+    data = mujoco.MjData(model)                                 # simulation state
+    mujoco.mj_forward(model, data)                              # work out positions and contacts
 
-    if left_touch and right_touch:                                  # both fingers on the object
-        data.ctrl[grip] = min(data.ctrl[grip] + squeeze, 255)       # final squeeze
-        return True
+    print("touching at start:", fingers_touching(model, data))  # ball is on the table, so expect (False, False)
 
-    data.ctrl[grip] = min(data.ctrl[grip] + rate, 255)              # close a little more
-    return False
+    grip = model.actuator("gripper_fingers_actuator").id        # gripper motor
+    left = model.body("gripper_left_pad").id                    # left finger pad
+    right = model.body("gripper_right_pad").id                  # right finger pad
+    ball_q = model.jnt_qposadr[model.joint("target_ball_freejoint").id]   # ball position start in qpos
 
+    mid = (data.xpos[left] + data.xpos[right]) / 2              # point between the open pads
+    data.qpos[ball_q:ball_q+3] = mid                            # move the ball there
+    mujoco.mj_forward(model, data)                              # update positions
 
-def hold_still(model, data, float_ball=False, obj_geom=BALL_GEOM):
-    data.qfrc_applied[:] = data.qfrc_bias                           # cancel gravity on everything
-    if not float_ball:                                              # normal use: ball feels gravity
-        ball_body = model.geom_bodyid[model.geom(obj_geom).id]
-        ball_v = model.jnt_dofadr[model.body_jntadr[ball_body]]     # first DOF of the ball's free joint
-        data.qfrc_applied[ball_v:ball_v+6] = 0
+    for step in range(2000):                                    # up to 4 s
+        data.qfrc_applied[:] = data.qfrc_bias                   # cancel gravity so nothing falls during the test
+        if close_step(model, data):                             # close a bit; True once both fingers touch
+            print(f"grasped after {step*0.002:.2f} s, gripper command = {data.ctrl[grip]:.0f}")
+            break
+        mujoco.mj_step(model, data)                             # advance physics one step
 
-def finger_midpoint(model, data):
-    left = model.body(LEFT_PADS[0]).id
-    right = model.body(RIGHT_PADS[0]).id
-    return (data.xpos[left] + data.xpos[right]) / 2.0               # midpoint of the two pads
+    print("touching at end:", fingers_touching(model, data))    # expect (True, True)
+
+    ball_v = model.jnt_dofadr[model.joint("target_ball_freejoint").id]   # ball velocity start in qvel
+    ball_body = model.body("target_ball_body").id                         # ball body (to read its position)
+
+    for _ in range(250):                                        # 0.5 s for the extra squeeze to take effect
+        data.qfrc_applied[:] = data.qfrc_bias                   # still cancelling gravity on everything
+        mujoco.mj_step(model, data)
+
+    offset_start = data.xpos[ball_body] - (data.xpos[left] + data.xpos[right]) / 2   # ball relative to fingers before letting go
+
+    for _ in range(1000):                                       # 2 s with gravity on the ball
+        data.qfrc_applied[:] = data.qfrc_bias                   # cancel gravity on the arm and gripper
+        data.qfrc_applied[ball_v:ball_v+6] = 0                  # but not on the ball
+        mujoco.mj_step(model, data)
+
+    offset_end = data.xpos[ball_body] - (data.xpos[left] + data.xpos[right]) / 2     # ball relative to fingers after 2 s
+    slip = np.linalg.norm(offset_end - offset_start)            # how far the ball moved within the grip (m)
+    print(f"slip in grip: {slip*1000:.1f} mm")
+    print("PASS: gradual grip holds" if slip < 0.005 else "FAIL: increase squeeze")
