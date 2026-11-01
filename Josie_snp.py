@@ -49,6 +49,23 @@ Find_joint_vel = np.array([model.jnt_dofadr[i] for i in UR3e_joints])
 # This assumes the first six actuators are torque actuators controlling these six joints.
 Joint_actuator = np.arange(6)
 
+# ----------------------- Gripper Actuator -----------------------
+
+# Actuator 6 controls the gripper fingers
+Gripper_actuator = 6
+
+# Gripper control settings
+gripper_open = 0
+gripper_closed = 255
+
+# Start with the gripper open
+gripper_command = gripper_open
+
+# Find the allowed gripper control range
+gripper_limits = model.actuator_ctrlrange[Gripper_actuator]
+
+print("Gripper control range:", gripper_limits)
+
 #----------------------- Set the UR3e starting pose -----------------------
 
 q_start = np.array([0, -1.57, 1.57, -1.57, -1.57, 0])
@@ -78,7 +95,23 @@ q_desired = q_start.copy()
 ball_position = data.body("target_ball_body").xpos.copy()
 
 # Aim 15 cm above the ball body's origin
-target_position = ball_position + np.array([0, 0, 0.25])
+# target_position = ball_position + np.array([0, 0, 0.25])
+
+# Day 3: Pick-place targets 
+# Initial position above the ball
+approach_position = ball_position + np.array([0, 0, 0.25])
+
+# Lower position for grasping (temporary estimate)
+descend_position = ball_position + np.array([0, 0, 0.15])
+
+# Start with the approach target
+target_position = approach_position.copy()
+
+# Current movement stage
+stage = "APPROACH"
+
+print("Approach position:", approach_position)
+print("Descend position:", descend_position)
 
 print("Ball position:", ball_position)
 print("Target position:", target_position)
@@ -127,7 +160,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             print(f"Distance to target: {distance:.4f} m")
             last_print = data.time
 
-        if distance > tolerance:
+        if stage in ("APPROACH", "DESCEND") and distance > tolerance:
 
             reached = False
 
@@ -203,13 +236,26 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             # Convert joint velocities into joint position targets
             q_desired += qdot_desired * dt
 
-        elif not reached:
+        elif stage in ("APPROACH", "DESCEND") and not reached:
 
             print("Target reached!")
             reached = True
 
             # Hold the reached joint position
             q_desired = q.copy()
+
+            if stage == "APPROACH":
+
+                print("Approach complete! Beginning descent.")
+
+                stage = "DESCEND"
+                target_position = descend_position.copy()
+
+            elif stage == "DESCEND":
+
+                print("Descent complete!")
+
+                stage = "READY_TO_GRASP"
 
         #---------- Joint Torque Controller ----------
         # Calculate joint position error
@@ -230,6 +276,19 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
         # Apply torque to the robot
         data.ctrl[Joint_actuator] = tau
+
+        # ----------------------- Gripper Control -----------------------
+
+        # Keep gripper open during approach and descent
+        if stage in ("APPROACH", "DESCEND"):
+            gripper_command = gripper_open
+
+        # Close gripper once descent is complete
+        elif stage == "READY_TO_GRASP":
+            gripper_command = gripper_closed
+
+        # Send command to gripper actuator
+        data.ctrl[Gripper_actuator] = gripper_command
 
         # Advance simulation
         mujoco.mj_step(model, data)

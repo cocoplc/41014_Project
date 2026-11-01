@@ -1,0 +1,25 @@
+3D localisation accuracy (no added noise)
+  trials: 50  (5 seeds x 10)
+  detection rate: 50/50
+  RMSE surface centroid only:   18.22 mm
+  RMSE sphere-centre corrected: 2.46 mm
+  mean / max corrected error:   2.31 / 4.67 mm
+  mean bias (x, y, z):          [ 0.23 -0.05  1.62] mm
+
+Depth-noise sweep (corrected RMSE)
+  sigma=  0.0 mm -> RMSE 2.46 mm
+  sigma=  2.0 mm -> RMSE 2.74 mm
+  sigma=  5.0 mm -> RMSE 2.73 mm
+  sigma= 10.0 mm -> RMSE 2.73 mm
+  sigma= 20.0 mm -> RMSE 2.73 mm
+
+Camera calibration evidence
+  source: ideal model K
+  K used:
+[[312.77   0.   320.  ]
+ [  0.   312.77 240.  ]
+ [  0.     0.     1.  ]]
+  K from model fovy:
+[[312.77   0.   320.  ]
+ [  0.   312.77 240.  ]
+ [  0.     0.     1.  ]]

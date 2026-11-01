@@ -1,0 +1,5 @@
+seed 0: ball at [ 0.067 -0.327  0.145]  repeatable: True
+seed 1: ball at [ 0.042 -0.218  0.145]  repeatable: True
+seed 2: ball at [-0.008 -0.322  0.145]  repeatable: True
+seed 3: ball at [-0.043 -0.332  0.145]  repeatable: True
+seed 4: ball at [ 0.129 -0.288  0.145]  repeatable: True
