@@ -1,0 +1,212 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.linalg import solve_discrete_are
+
+# Updating the controller 100 times per second
+h = 0.01
+
+# Change in joint angle and velocity 
+A = np.array([
+    [1, h],
+    [0, 1]
+])
+
+# Shows how acceleration affects angle and velocity
+B = np.array([
+    [0.5 * h**2],
+    [h]
+])
+
+# Encoder just measures angle, velocity is estimated from the kalman filter
+C = np.array([[1, 0]])
+
+# Penalties for angle error and velocity error
+Q = np.diag([100.0, 10.0])
+
+# Penalises overly large acceleration commands so that the controller doesn't try to reach
+    # the targer at any cost
+R = np.array([[1.0]])
+
+# Solving the riccati equation using this model and the applied LQR weights
+riccati = solve_discrete_are(A, B, Q, R)
+
+# Calculating the LQR feedback gains (angle error, velocity error)
+K = np.linalg.solve(R + B.T @ riccati @ B, B.T @ riccati @ A)
+# Printing the result
+print("LQR gain:", K)
+
+# Adding a small amount of random noise to the encoder readings for testing
+encoder_std = 0.01
+
+# Measurement noise variance
+R_n = np.array([[encoder_std**2]])
+
+# Assumed uncertainty in the joint's acceleration.
+acceleration_std = 0.5
+
+# Process noise covariance.
+Q_d = acceleration_std**2 * (B @ B.T)
+Q_d += 1e-10 * np.eye(2)
+
+# Starting uncertainty for the angle and velocity estimates (kalman covariance matrix)
+P = np.diag([0.1**2, 0.5**2])
+# Initial uncertainty in our angle and velocity estimates.
+
+# Starting the simulated joint at 0 radians and with no velocity
+true_state = np.array([
+    [0.0],
+    [0.0]
+])
+
+# Joint state initial guess (but the kalman filter will update the estimate as it receives measurements from the encoder)
+estimated_state = np.array([
+    [0.0],
+    [0.0]
+])
+
+# The joint should move to 30 degrees and then stop
+target = np.array([
+    [np.deg2rad(30.0)],
+    [0.0]
+])
+
+
+# Simulation setup
+duration = 5.0
+steps = round(duration / h)
+
+# Fixed random seed to get the same results across repeated measurements
+rng = np.random.default_rng(27)
+
+# Setting up the measurement storage
+times = []
+true_angles = []
+estimated_angles = []
+measured_angles = []
+
+true_velocities = []
+estimated_velocities = []
+accelerations = []
+
+
+# Running the LQR control loop
+for step in range(steps):
+
+    current_time = (step + 1) * h
+
+    """Calculating the acceleration using the LQR"""
+
+    # Comparing the estimated state with the target (not using the true joint state anymore)
+    error = estimated_state - target
+
+    # The LQR calculates the acceleration required to reduce angular and velocity error
+    u = float((-K @ error).item())
+
+    """Simulating the actual joint movement for comparison"""
+
+    # Adding a small random disturbance to the acceleration to more realistically simulate the imperfect acceleration
+    actual_acceleration = (u + rng.normal(0.0, acceleration_std))
+
+    # Updating the actual (simulated) joint state (the LQR and kalman filter don't receive this information)
+    true_state = (A @ true_state + B * actual_acceleration)
+
+    """Simulated encoder"""
+
+    # Measuring the true anfle and adding noise (the kalman filter receives this, but not the true velocity)
+    measurement = ((C @ true_state).item() + rng.normal(0.0, encoder_std))
+
+
+    """Using the kalman filter to predict the new angle and velocity from the previous estimate and the commanded acceleration"""
+    predicted_state = (A @ estimated_state + B * u)
+
+    # Predicting how uncertain the new state estimate is by carrying the previous uncertainty forward and adding the model's uncertainty
+    predicted_P = A @ P @ A.T + Q_d
+
+
+
+    """Using the kalman filter to correct the predicted angle and velocity"""
+
+    # Comparing the encoder measurement with the angle that the model predicted (this shows how much the prediction disagrees with the sensor)
+    innovation = (measurement - (C @ predicted_state).item())
+
+    # Calculating the expected uncertainty in the difference between prediction and measurement
+    S = C @ predicted_P @ C.T + R_n
+
+    # Calculating the kalman gain to determine the degree to which the measurement should correct the prediction (not K, the LQR gain)
+    L = np.linalg.solve(S, C @ predicted_P).T
+
+    # Correcting the predicted angle and velocity
+    estimated_state = (predicted_state + L * innovation)
+
+    # Updating the uncertainty based on the above procedures and the new encoder measurement
+    I = np.eye(2)
+    P = ((I - L @ C) @ predicted_P @ (I - L @ C).T + L @ R_n @ L.T)
+
+
+
+    # Recording all the results
+    times.append(current_time)
+    true_angles.append(np.rad2deg(true_state[0, 0]))
+    estimated_angles.append(np.rad2deg(estimated_state[0, 0]))
+    measured_angles.append(np.rad2deg(measurement))
+    true_velocities.append(true_state[1, 0])
+    estimated_velocities.append(estimated_state[1, 0])
+    accelerations.append(u)
+
+    # Printing the results every second
+    if (step + 1) % 100 == 0:
+        print(
+            f"Time: {current_time:.1f} s | "
+            f"True angle: {np.rad2deg(true_state[0,0]):.2f} deg | "
+            f"Estimated angle: {np.rad2deg(estimated_state[0,0]):.2f} deg | "
+            f"Velocity: {estimated_state[1,0]:.3f} rad/s"
+        )
+
+
+# Graphing the angle response
+plt.figure()
+plt.plot(times, measured_angles, label="Noisy encoder", alpha=0.3)
+plt.plot(times, true_angles, label="True angle")
+plt.plot(times, estimated_angles, label="Kalman estimate", linestyle="--")
+plt.axhline(30.0, linestyle=":", label="Target (30 degrees)")
+plt.xlabel("Time (s)")
+plt.ylabel("Joint angle (degrees)")
+plt.title("LQG - Joint Angle Control")
+plt.legend()
+plt.grid(True)
+
+# Graphing the velocity response
+plt.figure()
+plt.plot(times, true_velocities, label="True velocity")
+plt.plot(times, estimated_velocities, label="Kalman estimate", linestyle="--")
+plt.axhline(0.0, linestyle=":")
+plt.xlabel("Time (s)")
+plt.ylabel("Joint velocity (rad/s)")
+plt.title("LQG - Velocity Estimation")
+plt.legend()
+plt.grid(True)
+
+# Graphing the acceleration commanded
+plt.figure()
+plt.plot(times, accelerations, label="LQR acceleration command")
+plt.axhline(0.0, linestyle=":")
+plt.xlabel("Time (s)")
+plt.ylabel("Acceleration (rad/s^2)")
+plt.title("LQG - Control Input")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+# Calculating and printing the final results
+angle_error = (np.array(estimated_angles) - np.array(true_angles))
+velocity_error = (np.array(estimated_velocities) - np.array(true_velocities))
+angle_rmse = np.sqrt(np.mean(angle_error**2))
+velocity_rmse = np.sqrt(np.mean(velocity_error**2))
+final_angle = np.rad2deg(true_state[0, 0])
+final_velocity = true_state[1, 0]
+
+print("\nFinal true angle:", final_angle, "degrees")
+print("Final true velocity:", final_velocity, "rad/s")
+print("Angle estimation RMSE:", angle_rmse, "degrees")
+print("Velocity estimation RMSE:", velocity_rmse, "rad/s")
