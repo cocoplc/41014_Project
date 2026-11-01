@@ -4,245 +4,271 @@
   <meta charset="utf-8">
   <meta name="description"
         content="41014 Sensors and Control for Mechatronic Systems – UR3 vision-guided pick in MuJoCo using a wrist-mounted RGB-D camera.">
-  <meta name="keywords" content="UR3, MuJoCo, RGB-D, visual servoing, Kalman filter, 41014, UTS">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>A4_SC: UR3 Vision-Guided Pick in MuJoCo</title>
+  <title>41014 Project: UR3 Vision-Guided Pick in MuJoCo</title>
 
-  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
-        rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  <link rel="stylesheet" href="./static/css/bulma.min.css">
-  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
-  <link rel="stylesheet" href="./static/css/index.css">
-  <link rel="icon" href="./static/images/favicon.svg">
+  <style>
+    :root {
+      --accent: #0f62fe;
+      --accent-soft: #e8f0ff;
+      --ink: #1b1f24;
+      --muted: #5b6470;
+    }
+    body { font-family: 'Noto Sans', sans-serif; color: var(--ink); }
+    h1, h2, h3, .title { font-family: 'Google Sans', sans-serif; }
 
-  <script defer src="./static/js/fontawesome.all.min.js"></script>
+    .hero.top {
+      background: linear-gradient(135deg, #0b1d3a 0%, #13315c 55%, #0f62fe 100%);
+      color: #fff;
+    }
+    .hero.top .title { color: #fff; font-size: 2.8rem; line-height: 1.2; }
+    .hero.top .subtitle { color: #cfdcf2; margin-top: 1rem !important; }
+    .authors { font-size: 1.15rem; margin-top: 1.25rem; color: #fff; }
+    .affil { color: #b8c7e0; margin-top: .4rem; }
+    .tag-chip {
+      display: inline-block; padding: .3rem .8rem; border-radius: 999px;
+      background: rgba(255,255,255,.12); color: #fff; font-size: .85rem; margin-bottom: 1rem;
+    }
+    .links { margin-top: 1.75rem; }
+    .links .button { margin: .3rem; border-radius: 999px; }
+
+    .section-title { font-size: 1.9rem; margin-bottom: 1.25rem !important; }
+    .lead { font-size: 1.1rem; color: var(--muted); line-height: 1.75; }
+
+    .media-box { border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+    .media-box img, .media-box video { display: block; width: 100%; }
+
+    .step {
+      height: 100%; padding: 1.5rem; border-radius: 12px; background: #fff;
+      border: 1px solid #e3e7ee; transition: transform .15s, box-shadow .15s;
+    }
+    .step:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(15,98,254,.12); }
+    .step .num {
+      width: 2.3rem; height: 2.3rem; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; background: var(--accent-soft); color: var(--accent);
+      font-weight: 700; margin-bottom: .8rem;
+    }
+    .step h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: .4rem; }
+    .step p { color: var(--muted); font-size: .95rem; }
+
+    .alt { background: #f6f8fb; }
+
+    .member {
+      padding: 1.5rem; border-radius: 12px; background: #fff; border: 1px solid #e3e7ee; height: 100%;
+    }
+    .member .avatar {
+      width: 3rem; height: 3rem; border-radius: 50%; background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: .8rem;
+    }
+    .member h3 { font-size: 1.1rem; font-weight: 600; }
+    .member .role { color: var(--accent); font-size: .9rem; margin-bottom: .5rem; }
+    .member p { color: var(--muted); font-size: .95rem; }
+
+    pre { background: #0b1d3a; color: #e6edf7; border-radius: 12px; padding: 1.25rem 1.5rem; font-size: .9rem; }
+    pre .c { color: #7f93b5; }
+
+    .footer { background: #0b1d3a; color: #b8c7e0; padding: 2.5rem 1.5rem; }
+    .footer a { color: #fff; text-decoration: underline; }
+  </style>
 </head>
 <body>
 
-<section class="hero">
+<!-- Header -->
+<section class="hero top">
   <div class="hero-body">
-    <div class="container is-max-desktop">
-      <div class="columns is-centered">
-        <div class="column has-text-centered">
-          <h1 class="title is-1 publication-title">UR3 Vision-Guided Pick in MuJoCo</h1>
-          <div class="is-size-5 publication-authors">
-            <span class="author-block">Chloe Sargiss,</span>
-            <span class="author-block">Hannah Murphy,</span>
-            <span class="author-block">Angus Tedeschi,</span>
-            <span class="author-block">Josephine Thu</span>
-          </div>
-
-          <div class="is-size-5 publication-authors">
-            <span class="author-block">41014 Sensors and Control for Mechatronic Systems – Assessment 4 Integrated Project (Track B)</span>
-            <span class="author-block">University of Technology Sydney</span>
-          </div>
-
-          <div class="column has-text-centered">
-            <div class="publication-links">
-              <!-- Code Link. -->
-              <span class="link-block">
-                <a href="https://github.com/cocoplc/A4_SC"
-                   class="external-link button is-normal is-rounded is-dark">
-                  <span class="icon">
-                      <i class="fab fa-github"></i>
-                  </span>
-                  <span>Code</span>
-                </a>
-              </span>
-              <!-- Results Link. -->
-              <span class="link-block">
-                <a href="https://github.com/cocoplc/A4_SC/tree/main/results"
-                   class="external-link button is-normal is-rounded is-dark">
-                  <span class="icon">
-                      <i class="fas fa-chart-line"></i>
-                  </span>
-                  <span>Results</span>
-                </a>
-              </span>
-              <!-- Evidence Link. -->
-              <span class="link-block">
-                <a href="https://github.com/cocoplc/A4_SC/tree/main/evidence"
-                   class="external-link button is-normal is-rounded is-dark">
-                  <span class="icon">
-                      <i class="far fa-images"></i>
-                  </span>
-                  <span>Evidence</span>
-                </a>
-              </span>
-            </div>
-          </div>
-        </div>
+    <div class="container is-max-desktop has-text-centered">
+      <span class="tag-chip">41014 Sensors and Control · Assessment 4 · Track B</span>
+      <h1 class="title">UR3 Vision-Guided Pick in MuJoCo</h1>
+      <p class="subtitle">Finding and grasping a randomly placed ball with a wrist-mounted RGB-D camera</p>
+      <div class="authors">Chloe Sargiss · Hannah Murphy · Angus Tedeschi · Josephine Thu</div>
+      <div class="affil">University of Technology Sydney</div>
+      <div class="links">
+        <a href="https://github.com/cocoplc/41014_Project" class="button is-white is-outlined">
+          <span class="icon"><i class="fab fa-github"></i></span><span>Code</span>
+        </a>
+        <a href="https://github.com/cocoplc/41014_Project/tree/main/results" class="button is-white is-outlined">
+          <span class="icon"><i class="fas fa-chart-line"></i></span><span>Results</span>
+        </a>
+        <a href="https://github.com/cocoplc/41014_Project/tree/main/evidence" class="button is-white is-outlined">
+          <span class="icon"><i class="far fa-images"></i></span><span>Evidence</span>
+        </a>
       </div>
     </div>
   </div>
 </section>
 
-<section class="hero teaser">
+<!-- Overview -->
+<section class="section">
   <div class="container is-max-desktop">
-    <div class="hero-body">
-      <video id="teaser" autoplay muted loop playsinline height="100%">
-        <source src="./static/videos/pick_demo.mp4"
-                type="video/mp4">
+    <h2 class="title section-title has-text-centered">Overview</h2>
+    <p class="lead has-text-centered">
+      A ball is placed at a random position on a table. The UR3 moves to a look pose, localises the
+      ball with its wrist RGB-D camera, estimates its own joint state with a Kalman filter, and uses
+      state-space control and visual servoing to reach in and grasp it, bringing together sensing,
+      estimation and control from 41014 in one closed loop.
+    </p>
+    <div class="media-box" style="margin-top:2rem;">
+      <video autoplay muted loop playsinline onerror="this.parentElement.style.display='none'">
+        <source src="./static/videos/pick_demo.mp4" type="video/mp4"
+                onerror="this.closest('.media-box').style.display='none'">
       </video>
-      <h2 class="subtitle has-text-centered">
-        A UR3 locates a randomly placed ball with its wrist RGB-D camera, then moves in and picks it up.
-      </h2>
     </div>
   </div>
 </section>
 
+<!-- Pipeline -->
+<section class="section alt">
+  <div class="container">
+    <h2 class="title section-title has-text-centered">System Pipeline</h2>
+    <div class="columns is-multiline is-centered">
+      <div class="column is-one-fifth-desktop is-half-tablet">
+        <div class="step">
+          <div class="num">1</div>
+          <h3>Scene Setup</h3>
+          <p>UR3, table, gripper, wrist camera and a randomly placed ball in MuJoCo.</p>
+        </div>
+      </div>
+      <div class="column is-one-fifth-desktop is-half-tablet">
+        <div class="step">
+          <div class="num">2</div>
+          <h3>RGB-D Vision</h3>
+          <p>Colour and depth images locate the ball and give its 3D position.</p>
+        </div>
+      </div>
+      <div class="column is-one-fifth-desktop is-half-tablet">
+        <div class="step">
+          <div class="num">3</div>
+          <h3>State Estimation</h3>
+          <p>A Kalman filter estimates joint states from noisy measurements.</p>
+        </div>
+      </div>
+      <div class="column is-one-fifth-desktop is-half-tablet">
+        <div class="step">
+          <div class="num">4</div>
+          <h3>Control &amp; Planning</h3>
+          <p>State-space control and visual servoing drive the gripper to the ball.</p>
+        </div>
+      </div>
+      <div class="column is-one-fifth-desktop is-half-tablet">
+        <div class="step">
+          <div class="num">5</div>
+          <h3>Grasp</h3>
+          <p>The gripper closes gradually and holds the ball securely.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
+<!-- Scene + Vision -->
 <section class="section">
   <div class="container is-max-desktop">
-    <!-- Overview. -->
-    <div class="columns is-centered has-text-centered">
-      <div class="column is-four-fifths">
-        <h2 class="title is-3">Overview</h2>
-        <div class="content has-text-justified">
-          <p>
-            This project builds a full sense–estimate–control loop for a UR3 manipulator in MuJoCo.
-            A ball is placed at a random position on a table. The robot moves to a look pose,
-            uses a wrist-mounted RGB-D camera to localise the ball, estimates its joint state with
-            a Kalman filter, and uses visual servoing and planning to reach and grasp it.
-          </p>
-          <p>
-            The system brings together the main topics of 41014: sensor modelling, state-space
-            control, state estimation and vision-based control.
-          </p>
+    <div class="columns">
+      <div class="column">
+        <h2 class="title is-4">Simulation Scene</h2>
+        <p class="lead" style="font-size:1rem;">
+          Each run resets the scene with a new random ball position, and the robot starts from a
+          fixed look pose so the ball is in view.
+        </p>
+        <div class="media-box" style="margin-top:1rem;">
+          <img src="./static/images/scene.png" alt="MuJoCo scene"
+               onerror="this.parentElement.style.display='none'">
+        </div>
+      </div>
+      <div class="column">
+        <h2 class="title is-4">Vision Localisation</h2>
+        <p class="lead" style="font-size:1rem;">
+          The wrist camera's RGB and depth images are combined to find the ball's position
+          relative to the robot.
+        </p>
+        <div class="media-box" style="margin-top:1rem;">
+          <img src="./static/images/vision.png" alt="Wrist camera view"
+               onerror="this.parentElement.style.display='none'">
         </div>
       </div>
     </div>
-    <!--/ Overview. -->
   </div>
 </section>
 
-
-<section class="section">
+<!-- Results -->
+<section class="section alt">
   <div class="container is-max-desktop">
-    <!-- Pipeline. -->
-    <div class="columns is-centered">
-      <div class="column is-full-width">
-        <h2 class="title is-3">System Pipeline</h2>
-        <div class="content has-text-justified">
-          <ol>
-            <li><b>Scene setup</b> – UR3, table, gripper, wrist camera and a randomly positioned ball in MuJoCo.</li>
-            <li><b>RGB-D vision</b> – the camera image and depth are used to find the ball and convert it to a 3D position.</li>
-            <li><b>State estimation</b> – a Kalman filter estimates the robot's joint states from noisy measurements.</li>
-            <li><b>Control and planning</b> – state-space control and visual servoing move the gripper to the ball.</li>
-            <li><b>Grasp</b> – the gripper closes gradually and holds the ball.</li>
-          </ol>
-        </div>
-      </div>
+    <h2 class="title section-title has-text-centered">Results</h2>
+    <p class="lead has-text-centered">
+      Vision localisation was evaluated over many random ball positions by comparing the estimated
+      position with the simulator's ground truth.
+    </p>
+    <div class="media-box" style="margin-top:2rem;">
+      <img src="./static/images/results.png" alt="Localisation results"
+           onerror="this.parentElement.style.display='none'">
     </div>
-    <!--/ Pipeline. -->
-
-    <div class="columns is-centered">
-
-      <!-- Scene. -->
-      <div class="column">
-        <div class="content">
-          <h2 class="title is-3">Simulation Scene</h2>
-          <p>
-            The robot starts from a fixed look pose so the ball is in the camera's view.
-            Each run resets the scene with a new random ball position.
-          </p>
-          <img src="./static/images/scene.png" alt="MuJoCo scene with UR3, table and ball."/>
-        </div>
-      </div>
-      <!--/ Scene. -->
-
-      <!-- Vision. -->
-      <div class="column">
-        <h2 class="title is-3">Vision Localisation</h2>
-        <div class="columns is-centered">
-          <div class="column content">
-            <p>
-              The wrist camera's RGB and depth images are combined to find the ball's position
-              relative to the robot.
-            </p>
-            <img src="./static/images/vision.png" alt="RGB-D view of the ball from the wrist camera."/>
-          </div>
-        </div>
-      </div>
-      <!--/ Vision. -->
-    </div>
-
-    <!-- Results. -->
-    <div class="columns is-centered">
-      <div class="column is-full-width">
-        <h2 class="title is-3">Results</h2>
-        <div class="content has-text-justified">
-          <p>
-            Vision localisation was evaluated across multiple random ball positions by comparing the
-            estimated position against the ground truth from the simulator.
-          </p>
-        </div>
-        <div class="content has-text-centered">
-          <img src="./static/images/results.png" alt="Vision localisation error results." width="75%"/>
-        </div>
-      </div>
-    </div>
-    <!--/ Results. -->
-
-
-    <!-- Team. -->
-    <div class="columns is-centered">
-      <div class="column is-full-width">
-        <h2 class="title is-3">Team Contributions</h2>
-        <div class="content has-text-justified">
-          <ul>
-            <li><b>Chloe Sargiss</b> – MuJoCo scene, UR3, gripper and wrist camera setup; random ball positioning.</li>
-            <li><b>Hannah Murphy</b> – RGB-D vision and ball localisation; vision evaluation.</li>
-            <li><b>Angus Tedeschi</b> – State-space control and Kalman filter observer.</li>
-            <li><b>Josephine Thu</b> – Visual servoing, planning and the full pick sequence.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-    <!--/ Team. -->
-
   </div>
 </section>
 
+<!-- Team -->
+<section class="section">
+  <div class="container">
+    <h2 class="title section-title has-text-centered">Team</h2>
+    <div class="columns is-multiline">
+      <div class="column is-3-desktop is-half-tablet">
+        <div class="member">
+          <div class="avatar">CS</div>
+          <h3>Chloe Sargiss</h3>
+          <div class="role">Simulation &amp; Robot Setup</div>
+          <p>MuJoCo scene, UR3, gripper and wrist camera; random ball positioning.</p>
+        </div>
+      </div>
+      <div class="column is-3-desktop is-half-tablet">
+        <div class="member">
+          <div class="avatar">HM</div>
+          <h3>Hannah Murphy</h3>
+          <div class="role">Vision &amp; Localisation</div>
+          <p>RGB-D ball detection, 3D localisation and vision evaluation.</p>
+        </div>
+      </div>
+      <div class="column is-3-desktop is-half-tablet">
+        <div class="member">
+          <div class="avatar">AT</div>
+          <h3>Angus Tedeschi</h3>
+          <div class="role">Control &amp; Estimation</div>
+          <p>State-space control and Kalman filter observer.</p>
+        </div>
+      </div>
+      <div class="column is-3-desktop is-half-tablet">
+        <div class="member">
+          <div class="avatar">JT</div>
+          <h3>Josephine Thu</h3>
+          <div class="role">Servoing &amp; Planning</div>
+          <p>Visual servoing, planning and the full pick sequence.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-<section class="section" id="Run">
-  <div class="container is-max-desktop content">
-    <h2 class="title">Run It</h2>
-    <pre><code>git clone https://github.com/cocoplc/A4_SC.git
-cd A4_SC
+<!-- Run -->
+<section class="section alt">
+  <div class="container is-max-desktop">
+    <h2 class="title section-title has-text-centered">Run It</h2>
+<pre><code>git clone https://github.com/cocoplc/41014_Project.git
+cd 41014_Project
 pip install mujoco numpy opencv-python matplotlib
 
-python scene_setup.py        # scene with look pose and random ball
-python Josie_snp.py          # full pick
-python evaluate_vision.py    # vision localisation evaluation</code></pre>
+python scene_setup.py       <span class="c"># scene with look pose and random ball</span>
+python Josie_snp.py         <span class="c"># full pick</span>
+python evaluate_vision.py   <span class="c"># vision localisation evaluation</span></code></pre>
   </div>
 </section>
 
-
-<footer class="footer">
-  <div class="container">
-    <div class="content has-text-centered">
-      <a class="icon-link" href="https://github.com/cocoplc/A4_SC" class="external-link">
-        <i class="fab fa-github"></i>
-      </a>
-    </div>
-    <div class="columns is-centered">
-      <div class="column is-8">
-        <div class="content">
-          <p>
-            This website is licensed under a <a rel="license"
-                                                href="http://creativecommons.org/licenses/by-sa/4.0/">Creative
-            Commons Attribution-ShareAlike 4.0 International License</a>.
-          </p>
-          <p>
-            Website template borrowed from <a
-              href="https://github.com/nerfies/nerfies.github.io">Nerfies</a>.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+<footer class="footer has-text-centered">
+  <p>
+    Website template borrowed from <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a>,
+    licensed under <a href="http://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
+  </p>
 </footer>
 
 </body>
