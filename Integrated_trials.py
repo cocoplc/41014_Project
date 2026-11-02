@@ -16,9 +16,9 @@ from gripper import fingers_touching
 
 # True runs 30 trials (ten positions, three conditions).
 # False runs one pick, with optional viewer and torque disturbance.
-ROBUSTNESS_TEST = True
+ROBUSTNESS_TEST = False
 
-SHOW_VIEWER = False      # Show the MuJoCo window in a single run
+SHOW_VIEWER = True      # Show the MuJoCo window in a single run
 WRIST_VIEW = False       # True shows the wrist camera instead of the outside view
 
 # Apply the same external torque during a single demonstration.
