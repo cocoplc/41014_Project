@@ -35,7 +35,7 @@
             <!-- free joint so the cube can move freely -->
             <freejoint name="target_ball_freejoint"/>
             <!-- 5 cm cube (size = half-lengths) -->
-            <geom name="target_ball" type="box" size="0.025 0.025 0.025" mass="0.06" rgba="1 0.08 0.58 1"/>
+            <geom name="target_ball" type="sphere" size="0.025" mass="0.06" rgba="1 0.08 0.58 1"/>        
         </body>
     </worldbody>
 </mujoco>

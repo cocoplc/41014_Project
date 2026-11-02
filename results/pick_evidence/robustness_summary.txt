@@ -1,0 +1,8 @@
+baseline: 10/10 picks (100%), tracking RMSE 0.815 deg, Kalman angle RMSE 0.105 deg
+  Failed seeds: []
+noisy: 10/10 picks (100%), tracking RMSE 0.928 deg, Kalman angle RMSE 0.150 deg
+  Failed seeds: []
+disturbed: 10/10 picks (100%), tracking RMSE 0.893 deg, Kalman angle RMSE 0.125 deg
+  Failed seeds: []
+Disturbance: 0.5 N m about world +Y, from 2.0 to 2.2 s.
+True joint/ball states are used for evaluation only.
