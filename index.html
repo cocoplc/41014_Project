@@ -209,7 +209,7 @@
 <section class="block" id="overview">
   <div class="wrap">
     <div class="label">01 — Overview</div>
-    <h2>Sense, Estimate, Control.</h2>
+    <h2>Sense, Estimate, Control</h2>
     <p style="margin-top:16px;"> 
       The simulation is meant to show a UR3 robot arm autonomously finding and picking up a ball using only what it can sense. Each run, MuJoCo places a ball at a random position on a table, and the robot starts from a fixed “look” pose so the ball is in view of its wrist-mounted RGB-D camera. The robot uses the camera’s colour image to detect the ball and the depth data to work out its 3D position relative to the robot. A Kalman filter estimates the robot’s joint states from noisy measurements, and state-space control and visual servoing then guide the gripper towards the ball. Once it’s in position, the gripper closes gradually and holds the ball, completing the pick. The goal is to demonstrate a full sense–estimate–control loop, where the robot reacts to what it perceives rather than following a pre-programmed path.
     </p>
@@ -225,7 +225,7 @@
 <section class="block" id="pipeline">
   <div class="wrap">
     <div class="label">02 — Pipeline</div>
-    <h2> Flow Chart of System.</h2>
+    <h2> Flow Chart of System</h2>
     <p class="lead">Five stages take the robot from a fresh random scene to a secure hold on the ball.</p>
     <div class="pipeline">
       <div class="step">
@@ -289,6 +289,7 @@
   <div class="wrap">
     <div class="label">03 — Results</div>
     <h2>Analysis of Graphs</h2>
+    <h3 style="margin-top:24px; margin-bottom:8px; font-size:1.25rem; color:var(--cyan);">Graph 1: State Estimation and Tracking</h3>
     
     <p style="margin-top:16px;"> 
       This graph shows a single pick run where an external torque is deliberately applied to the arm at around 2 seconds to test how the system responds to a disturbance.
