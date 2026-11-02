@@ -154,6 +154,19 @@
 
     footer { padding: 48px 0; border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: .85rem; }
     footer a { color: var(--text); border-bottom: 1px solid var(--line); }
+    .ai-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 48px; }
+    .ai-grid .panel h3 { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; }
+    .ai-grid .panel h3 i { color: var(--cyan); font-size: 1rem; }
+    .ai-list { list-style: none; margin-top: 12px; }
+    .ai-list li { position: relative; padding-left: 18px; margin-bottom: 8px; color: var(--muted); font-size: .92rem; line-height: 1.6; }
+    .ai-list li::before { content: ""; position: absolute; left: 0; top: .65em; width: 6px; height: 6px; border-radius: 50%; background: var(--violet); }
+    .declare {
+      margin-top: 28px; padding: 24px 28px; border-radius: 16px; border: 1px solid rgba(62,230,255,.25);
+      background: linear-gradient(120deg, rgba(62,230,255,.06), rgba(139,123,255,.06));
+      color: var(--text); font-size: .95rem;
+    }
+    @media (max-width: 900px) { .ai-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .ai-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -167,6 +180,7 @@
       <a href="#results">Results</a>
       <a href="#team">Team</a>
       <a href="#run">Run</a>
+      <a href="#ai">AI</a>
     </div>
   </div>
 </nav>
@@ -328,13 +342,48 @@
     </div>
   </div>
 </section>
+<section class="block" id="ai">
+  <div class="wrap">
+    <div class="label">06 — AI Declaration</div>
+    <h2>Use of generative AI.</h2>
+    <p class="lead">
+      Generative AI tools were used in parts of this project as a support tool. All AI-assisted output was reviewed, tested and edited by the team, and we take full responsibility for the final work.
+    </p>
+
+    <div class="ai-grid">
+      <div class="panel">
+        <h3><i class="fas fa-robot"></i>Tools used</h3>
+        <ul class="ai-list">
+          <li>Claude (Anthropic)</li>
+          <li>ChatGPT (OpenAI)</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3><i class="fas fa-check"></i>Used for</h3>
+        <ul class="ai-list">
+          <li>Debugging and explaining error messages</li>
+          <li>Clarifying MuJoCo, OpenCV and NumPy usage</li>
+          <li>Adapting the project webpage template</li>
+          <li>Proofreading written content</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3><i class="fas fa-xmark"></i>Not used for</h3>
+        <ul class="ai-list">
+          <li>Designing the system architecture</li>
+          <li>Generating results or evaluation data</li>
+          <li>Writing analysis or conclusions</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="declare">
+      We declare that this work is our own, that AI use followed the UTS and 41014 subject guidelines, and that all AI-assisted content has been checked for accuracy and acknowledged above.
+    </div>
+  </div>
+</section>
 
 <footer>
-  <div class="wrap">
-    41014 Sensors and Control for Mechatronic Systems · UTS · 2026<br>
-    Template adapted from <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a>, licensed under <a href="http://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
-  </div>
-</footer>
 
 </body>
 </html>
