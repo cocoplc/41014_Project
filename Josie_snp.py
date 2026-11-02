@@ -100,6 +100,9 @@ approach_position = ball_position + np.array([0, 0, 0.25])
 # Lower position for grasping (temporary estimate)
 descend_position = ball_position + np.array([0, 0, 0.15])
 
+# Rise with the ball
+rise_position = ball_position + np.array([0, 0, 0.25])
+
 # Start with the approach target
 target_position = approach_position.copy()
 
@@ -156,7 +159,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             print(f"Distance to target: {distance:.4f} m")
             last_print = data.time
 
-        if stage in ("APPROACH", "DESCEND") and distance > tolerance:
+        if stage in ("APPROACH", "DESCEND", "RISE") and distance > tolerance:
 
             reached = False
 
@@ -221,7 +224,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             # Convert joint velocities into joint position targets
             q_desired += qdot_desired * dt
 
-        elif stage in ("APPROACH", "DESCEND") and not reached:
+        elif stage in ("APPROACH", "DESCEND", "RISE") and not reached:
 
             print("Target reached!")
             reached = True
@@ -241,6 +244,17 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
                 print("Descent complete!")
 
                 stage = "READY_TO_GRASP"
+
+            if stage == "READY_TO_GRASP":
+
+                print("gripping")
+                stage = "RISE"
+                target_position = rise_position.copy()
+
+            elif stage == "RISE":
+                print("object in gripper, begin rising.")
+
+                stage = "READY_TO_MOVE"
 
         #---------- Joint Torque Controller ----------
         # Calculate joint position error
@@ -269,8 +283,11 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             gripper_command = gripper_open
 
         # Close gripper once descent is complete
-        elif stage == "READY_TO_GRASP":
+        elif stage in ("READY_TO_GRASP", "RISE", "READY_TO_MOVE"):
             gripper_command = gripper_closed
+
+        # elif stage == "READY_TO_MOVE":
+        #     gripper_command = gripper_closed
 
         # Send command to gripper actuator
         data.ctrl[Gripper_actuator] = gripper_command
