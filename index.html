@@ -209,8 +209,8 @@
 <section class="block" id="overview">
   <div class="wrap">
     <div class="label">01 — Overview</div>
-    <h2>Sense, estimate, control.</h2>
-    <p class="lead">
+    <h2>Sense, Estimate, Control.</h2>
+    <p style="margin-top:16px;"> 
       The simulation is meant to show a UR3 robot arm autonomously finding and picking up a ball using only what it can sense. Each run, MuJoCo places a ball at a random position on a table, and the robot starts from a fixed “look” pose so the ball is in view of its wrist-mounted RGB-D camera. The robot uses the camera’s colour image to detect the ball and the depth data to work out its 3D position relative to the robot. A Kalman filter estimates the robot’s joint states from noisy measurements, and state-space control and visual servoing then guide the gripper towards the ball. Once it’s in position, the gripper closes gradually and holds the ball, completing the pick. The goal is to demonstrate a full sense–estimate–control loop, where the robot reacts to what it perceives rather than following a pre-programmed path.
     </p>
     <div class="media">
@@ -287,17 +287,17 @@
 <section class="block" id="results">
   <div class="wrap">
     <div class="label">03 — Results</div>
-    <h2>How well does it see?</h2>
-    <p class="lead">
-      Vision localisation was evaluated over many random ball positions by comparing the estimated
-      position with the simulator's ground truth.
+    <h2>Analysis of Graphs</h2>
+    
+    <p style="margin-top:16px;"> 
+      This graph shows a single pick run where an external torque is deliberately applied to the arm at around 2 seconds to test how the system responds to a disturbance.
     </p>
     <div class="media">
       <img src="./static/images/trial_analysis.png" alt="Trial analysis results" onerror="this.parentElement.style.display='none'">
     </div>
     
     <p style="margin-top:16px;"> 
-      This graph shows a single pick run where an external torque is deliberately applied to the arm at around 2 seconds to test how the system responds to a disturbance. The top plot shows the Kalman filter's estimate of the shoulder angle and how it closely tracks the true angle throughout the run, including through the disturbance. The true angle also stays within the filter's ±2σ confidence band, which shows that the filter's uncertainty is realistic.
+      The top plot shows the Kalman filter's estimate of the shoulder angle and how it closely tracks the true angle throughout the run, including through the disturbance. The true angle also stays within the filter's ±2σ confidence band, which shows that the filter's uncertainty is realistic.
     </p>    
     
     <p style="margin-top:16px;"> 
