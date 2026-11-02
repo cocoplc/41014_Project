@@ -28,7 +28,7 @@ Run the full pick (vision → plan → grasp):
 python Josie_snp.py
 ```
 
-Evaluate vision localisation (results saved to `results/` and `evidence/`):
+Evaluate vision localisation for camera calibration every time the conditons change (results saved to `results/` and `evidence/`):
 ```
 python evaluate_vision.py
 ```
