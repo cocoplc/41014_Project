@@ -309,6 +309,22 @@
     <p style="margin-top:16px;">  
       The bottom plot shows the largest tracking error across all six joints. The disturbance causes the biggest error of the run with about 4.7° error, but the controller brings it back below 0.5° within 1.5 seconds. This shows the system recovers well from being knocked. Smaller peaks at around 6 and 8.5 seconds occur as the arm moves to new targets. From around 12 seconds the error rises to about 3° and stays there. This is due to contact and load forces while the gripper holds the ball. Overall, the results show that the state estimation is accurate and the control loop is robust to disturbances.
     </p>
+
+        <h3 style="margin-top:64px; margin-bottom:8px; font-size:1.25rem; color:var(--cyan);">Graph 2: Tracking and Estimation Across Robustness Conditions</h3>
+    <p>
+      This graph compares joint tracking error and Kalman filter estimation error across ten random ball positions under three conditions: baseline, sensor noise, and external disturbance.
+    </p>
+    <div class="media">
+      <img src="./static/images/comparison_errors.png" alt="Tracking and estimation across robustness conditions"
+           onerror="this.parentElement.style.display='none'">
+    </div>
+    <p style="margin-top:32px;">
+      The top plot shows joint tracking RMSE. The baseline condition has the lowest error at 0.80–0.84°. Adding in a physical push for disturbance raises the error to 0.87–0.92°, and sensor noise raises it most, to around 0.90–0.97°. Even in the worst case, tracking error stays below 1°, showing the controller remains accurate under all three conditions.
+    </p>
+    <p style="margin-top:16px;">
+      The bottom plot shows the Kalman filter's angle estimation RMSE. Error is lowest for the baseline (about 0.105°), higher for the disturbed case (about 0.125°) and highest with added noise (about 0.15°). The values barely change between seeds, which shows the estimator's accuracy does not depend on where the ball is placed. Across both plots, sensor noise has a larger effect than the external disturbance, but the system stays robust throughout.
+    </p>
+    
   </div>
 </section>
 
