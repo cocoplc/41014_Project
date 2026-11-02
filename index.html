@@ -295,6 +295,9 @@
     <div class="media">
       <img src="./static/images/trial_analysis.png" alt="Trial analysis results" onerror="this.parentElement.style.display='none'">
     </div>
+    <p class="lead" style="margin-top:32px;">
+      This graph shows a single pick run where an external torque is deliberately applied to the arm at around 2 seconds to test how the system responds to a disturbance. The top plot shows the Kalman filter's estimate of the shoulder angle and how it closely tracks the true angle throughout the run, including through the disturbance. The true angle also stays within the filter's ±2σ confidence band, which shows that the filter's uncertainty is realistic. The middle plot shows the estimated shoulder velocity, which the filter must infer because velocity is not measured directly. The uncertainty starts large but converges within a fraction of a second. During the disturbance the estimate lags and underestimates the brief velocity spike, an expected limitation when a Kalman filter meets a sudden force the model doesn't account for. The bottom plot shows the largest tracking error across all six joints. The disturbance causes the biggest error of the run with about 4.7° error, but the controller brings it back below 0.5° within 1.5 seconds. This shows the system recovers well from being knocked. Smaller peaks at around 6 and 8.5 seconds occur as the arm moves to new targets. From around 12 seconds the error rises to about 3° and stays there. This is due to contact and load forces while the gripper holds the ball. Overall, the results show that the state estimation is accurate and the control loop is robust to disturbances.
+    </p>
   </div>
 </section>
 
