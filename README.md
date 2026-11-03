@@ -37,12 +37,19 @@ SEED = 0                  # Ball position used for the single pick
 
 ## Where results are saved
 ```
-results/pick_evidence/demo_disturbed/seed_0/   # single pick: trial_data.csv, trial_analysis.png
-results/pick_evidence/                         # robustness test: robustness_results.csv,
-                                               # robustness_summary.txt, comparison_errors.png,
-                                               # ball_positions.png
-evidence/vision/                               # camera calibration graphs (only saved when
-                                               # Camera_calibration.py is run on its own)
+results/pick_evidence/demo_disturbed/seed_0/    # single pick
+    trial_data.csv
+    trial_analysis.png
+
+results/pick_evidence/                          # robustness test
+    robustness_results.csv
+    robustness_summary.txt
+    comparison_errors.png
+    ball_positions.png
+
+evidence/vision/                                # camera calibration graphs
+    calibration_reprojection.png                # (only saved when Camera_calibration.py is run on its own)
+    example_detection.png                   
 ```
 
 ## Contributors
