@@ -17,8 +17,6 @@ noise_levels = [0.0, 0.001, 0.002, 0.005, 0.01]   # depth noise (m)
  
  
 def set_up(model, data, seed, move_wrist):
-    """Place the ball (Chloe's reset), optionally move the wrist, return the true ball centre."""
-    reset_scene(model, data, seed)
     if move_wrist:
         rng = np.random.default_rng(1000 + seed)
         data.qpos[:6] = LOOK_POSE
@@ -33,9 +31,6 @@ def rmse(errors):
  
 # ---------------------------------------------------------------- 1. calibration
 def calibrate(model, data, cam):
-    """Pinhole model: u = fx * X/Z + cx,  v = fy * Y/Z + cy.
-    (X, Y, Z) = true ball centre in the camera frame, (u, v) = detected ball pixel.
-    Each equation is a straight line, so fx, cx and fy, cy come from a line fit."""
     xz, yz, us, vs = [], [], [], []
     for seed in calib_seeds:
         for move_wrist in (False, True):
@@ -58,9 +53,6 @@ def calibrate(model, data, cam):
  
  
 def calibrate_depth(model, data, cam, K):
-    """Check the depth readings against known distances: fit measured = scale * true.
-    For each view, look at the pixel where the ball's centre appears. Along that ray the
-    camera sees the front of the ball, so the true depth there is Z * (1 - r / distance)."""
     radius = model.geom("target_ball").size[0]
     true_depths, measured_depths = [], []
     for seed in calib_seeds:

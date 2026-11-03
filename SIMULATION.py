@@ -12,10 +12,12 @@ import matplotlib.pyplot as plt
 from scene_setup import reset_scene     # Calls the reset scene function
 from vision import (WristCamera, detect_ball_camera, R_MJ_TO_OPT)    # Captures RGB-S images and detects the ball
 from gripper import fingers_touching    # Determines whether the gripper fingers contact the ball
+from Camera_calibration import calibrate    # Calibrates the wrist camera using a set of ball positions
+
 
 # True runs 30 trials (ten positions, three conditions)
 # False runs one pick, with optional viewer and torque disturbance
-ROBUSTNESS_TEST = True
+ROBUSTNESS_TEST = False
 
 SHOW_VIEWER = True      # Show the MuJoCo window in a single run
 WRIST_VIEW = False       # True shows the wrist camera instead of the outside view
@@ -59,6 +61,19 @@ MAX_LAG = np.deg2rad(3)       # Keep reference angles within 3 degrees of estima
 
 FOLDER = Path(__file__).resolve().parent  # Find scene.xml beside this script
 RESULTS = FOLDER / "results" / "pick_evidence"  # Save graphs and CSVs here
+
+
+"""
+Calibrates the wrist camera once, before any picks run
+"""
+def calibrate_camera():
+    model = mujoco.MjModel.from_xml_path(str(FOLDER / "scene.xml"))   # Separate copy of the scene
+    data = mujoco.MjData(model)
+    camera = WristCamera(model)
+    camera_matrix, _, _ = calibrate(model, data, camera)    # Keep K, ignore the error values
+    camera.renderer.close()
+    print("Calibrated camera matrix:\n", camera_matrix.round(2), flush=True)
+    return camera_matrix
 
 
 """
@@ -213,9 +228,7 @@ def run_trial(
 
     """Camera and Gripper"""
 
-    calibration_file = (FOLDER / "evidence" / "vision" / "K_calibrated.npy")
-
-    camera_matrix = np.load(calibration_file)
+    camera_matrix = CAMERA_MATRIX    # Calibrated once at the start of the run
 
     camera = WristCamera(model)
 
@@ -848,6 +861,8 @@ def save_comparison(trials):
 """Actually Starts the Tests"""
 
 if __name__ == "__main__":
+    CAMERA_MATRIX = calibrate_camera()    # Runs once, then every trial uses it
+
     if ROBUSTNESS_TEST:
         print("ROBUSTNESS TEST: " "10 ball positions x 3 conditions = 30 trials", flush=True)
 
