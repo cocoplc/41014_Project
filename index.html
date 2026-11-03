@@ -289,7 +289,32 @@
   <div class="wrap">
     <div class="label">03 — Results</div>
     <h2>Analysis of Graphs</h2>
-    <h3 style="margin-top:24px; margin-bottom:8px; font-size:1.25rem; color:var(--cyan);">Graph 1: State Estimation and Tracking</h3>
+
+    <h3 style="margin-top:24px; margin-bottom:8px; font-size:1.25rem; color:var(--cyan);">Graph 1: Example Calibraiton from One Test</h3>
+    <p style="margin-top:16px;">
+      The below image shows exmaple images taken from the camera calibration from one of the 40 tests run in Camera_callibration. 
+    </p>
+    <div class="media">
+      <img src="./static/images/example_detection.png" alt="Camera calibration graph 1"
+           onerror="this.parentElement.style.display='none'">
+    </div>
+    <p style="margin-top:32px;">
+      The above image shows how the wrist camera locates the ball. The yellow ✕ marks the detected centre in each panel. The left image is the raw RGB view from the wrist camera, showing the purple ball on the table. The middle image is the colour mask, where only pixels matching the ball’s colour are kept. This separates the ball from the similar-coloured pink checkerboard, however the bright lighting on the top of the ball leaves a small hole in the mask, which shifts the detected centre slightly downward as seen with the X being slightly lower than the centre. The right image is the depth map. Combining the ball’s position in the colour image with its depth gives the ball’s full 3D position relative to the robot, which the arm then uses as its target.
+    </p>
+
+    <h3 style="margin-top:64px; margin-bottom:8px; font-size:1.25rem; color:var(--cyan);">Graph 2: Results from the 40 Tests</h3>
+    <p style="margin-top:16px;">
+      The below image shows the results after all 40 tests are run to see if the X lines up with the actual balls position
+    </p>
+    <div class="media">
+      <img src="./static/images/calibration_reprojection.png" alt="Camera calibration graph 2"
+           onerror="this.parentElement.style.display='none'">
+    </div>
+    <p style="margin-top:32px;">
+      The above plot shows the camera calibration by comparing where the ball was actually was (blue dots) with where the calibrated camera model predicts (orange crosses), using the estimated intrinsic matrix K. The two sets of points line up closely across the image, giving a reprojection RMSE of 3.11 pixels. this means that on average the model’s predictions are within about 3 pixels of the true detections.
+    </p>
+    
+    <h3 style="margin-top:24px; margin-bottom:8px; font-size:1.25rem; color:var(--cyan);">Graph 3: State Estimation and Tracking</h3>
     
     <p style="margin-top:16px;"> 
       This graph shows a single pick run where an external torque is deliberately applied to the arm at around 2 seconds to test how the system responds to a disturbance.
@@ -310,7 +335,7 @@
       The bottom plot shows the largest tracking error across all six joints. The disturbance causes the biggest error of the run with about 4.7° error, but the controller brings it back below 0.5° within 1.5 seconds. This shows the system recovers well from being knocked. Smaller peaks at around 6 and 8.5 seconds occur as the arm moves to new targets. From around 12 seconds the error rises to about 3° and stays there. This is due to contact and load forces while the gripper holds the ball. Overall, the results show that the state estimation is accurate and the control loop is robust to disturbances.
     </p>
 
-        <h3 style="margin-top:64px; margin-bottom:8px; font-size:1.25rem; color:var(--cyan);">Graph 2: Tracking and Estimation Across Robustness Conditions</h3>
+        <h3 style="margin-top:64px; margin-bottom:8px; font-size:1.25rem; color:var(--cyan);">Graph 4: Tracking and Estimation Across Robustness Conditions</h3>
     <p>
       This graph compares joint tracking error and Kalman filter estimation error across ten random ball positions under three conditions: baseline, sensor noise, and external disturbance.
     </p>
@@ -319,7 +344,7 @@
            onerror="this.parentElement.style.display='none'">
     </div>
     <p style="margin-top:32px;">
-      The top plot shows joint tracking RMSE. The baseline condition has the lowest error at 0.80–0.84°. Adding in a physical push for disturbance raises the error to 0.87–0.92°, and sensor noise raises it most, to around 0.90–0.97°. Even in the worst case, tracking error stays below 1°, showing the controller remains accurate under all three conditions.
+      The top plot shows joint tracking RMSE (Root Mean Square Error). The baseline condition has the lowest error at 0.80–0.84°. Adding in a physical push for disturbance raises the error to 0.87–0.92°, and sensor noise raises it most, to around 0.90–0.97°. Even in the worst case, tracking error stays below 1°, showing the controller remains accurate under all three conditions.
     </p>
     <p style="margin-top:16px;">
       The bottom plot shows the Kalman filter's angle estimation RMSE. Error is lowest for the baseline (about 0.105°), higher for the disturbed case (about 0.125°) and highest with added noise (about 0.15°). The values barely change between seeds, which shows the estimator's accuracy does not depend on where the ball is placed. Across both plots, sensor noise has a larger effect than the external disturbance, but the system stays robust throughout.
