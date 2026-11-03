@@ -18,26 +18,34 @@ pip install mujoco numpy opencv-python matplotlib
 ```
 
 ## Run commands
-Load the scene with the look pose and a random ball position:
 ```
-python scene_setup.py
+python SIMULATION.py
 ```
+## Changing the tests
+```
+ROBUSTNESS_TEST = False   # True runs 10 ball positions x 3 conditions (baseline, noisy, disturbed)
+                          # False runs a single pick
+DEMO_DISTURBANCE = True   # True applies a 0.5 N m torque pulse during the single pick
+SHOW_VIEWER = True        # True opens the MuJoCo window during the single pick
+WRIST_VIEW = False        # True shows the wrist camera view instead of the outside view
+SEED = 0                  # Ball position used for the single pick
+```
+## Accessing saved results
+```
+results/pick_evidence/demo_disturbed/seed_0/    # single pick
+    trial_data.csv
+    trial_analysis.png
 
-Run the full pick (vision → plan → grasp):
-```
-python Josie_snp.py
-```
+results/pick_evidence/                          # robustness test
+    robustness_results.csv
+    robustness_summary.txt
+    comparison_errors.png
+    ball_positions.png
 
-Evaluate vision localisation for camera calibration every time the conditons change (results saved to `results/` and `evidence/`):
+evidence/vision/                                # camera calibration graphs
+    calibration_reprojection.png                # (only saved when Camera_calibration.py
+    example_detection.png                       #  is run on its own)
 ```
-python evaluate_vision.py
-```
-
-Kalman filter joint-state estimation test:
-```
-python kalman_filter_test.py
-```
-
 ## Contributors
 - Chloe Sargiss – MuJoCo scene, robot and gripper setup
 - Hannah Murphy – RGB-D vision and localisation
