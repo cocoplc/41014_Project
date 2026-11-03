@@ -10,7 +10,7 @@ import matplotlib   # Creates the graphs and plots
 matplotlib.use("Agg")   # Want to save plots to image files instead of opening MPL
 import matplotlib.pyplot as plt
 from scene_setup import reset_scene     # Calls the reset scene function
-from vision import (WristCamera, detect_ball_camera, R_MJ_TO_OPT)    # Captures RGB-S images and detects the ball
+from vision import (WristCamera, detect_ball_camera, R_MJ_TO_OPT)    # Captures RGB-D images and detects the ball
 from gripper import fingers_touching    # Determines whether the gripper fingers contact the ball
 from Camera_calibration import calibrate    # Calibrates the wrist camera using a set of ball positions
 
@@ -146,11 +146,10 @@ def run_trial(
     camera_id = model.camera("wrist_camera").id
     ball_id = model.body("target_ball_body").id
 
-    # Calculate the number of physics updates per controller step
+    # Calculates the number of physics updates per controller step
     physics_steps = round(DT / model.opt.timestep)
 
-    # Apply the external torque to a wrist link
-    # Look for the first matching body name in the UR3e model
+    # Applies the external torque to the wrist_3_link 
     disturbance_body = model.body("wrist_3_link").id
 
     """STATE-SPACE MODEL AND LQR"""
@@ -510,7 +509,7 @@ def run_trial(
                         flush=True
                     )
 
-            """LGR and Calculated Torque"""
+            """LGR and Computed Torque"""
 
             desired_states = np.column_stack((q_target, qdot_target))
 
