@@ -1,28 +1,21 @@
-HANNAH - DAY 4 VISION EVIDENCE
+VISION EVIDENCE
 
-1. Camera calibration (fit from known ball centres)
-   points used: 79 (40 seeds x 2 wrist poses; separate from test seeds)
-   ideal K (fovy 75):      fx 312.77  fy 312.77  cx 320.00  cy 240.00
-   calibrated K:           fx 306.95  fy 303.15  cx 319.77  cy 239.48
-   difference:             fx -5.82 (-1.86%)  fy -9.62 (-3.08%)  cx -0.23  cy -0.52 px
-   reprojection error:     RMSE 3.11 px   max 18.07 px
+1. Camera calibration
+   ideal K (fovy 75):  fx 312.77  fy 312.77  cx 320.00  cy 240.00
+   calibrated K:       fx 306.95  fy 303.15  cx 319.77  cy 239.48
+   reprojection error: RMSE 3.11 px, max 18.07 px (79 points)
 
-2. 3D localisation accuracy (20 random ball positions per condition)
-   ideal K:  detected 40/40
-       look_pose    RMSE   2.62 mm   mean   2.51   max   3.77 mm
-       wrist_moved  RMSE   2.59 mm   mean   2.46   max   3.74 mm
-   calibrated K:  detected 40/40
-       look_pose    RMSE   1.93 mm   mean   1.73   max   4.37 mm
-       wrist_moved  RMSE   2.54 mm   mean   2.34   max   4.09 mm
-   without sphere-centre correction (calibrated K): RMSE 16.47 mm
-   mean bias (x, y, z): [ 0.    0.35 -0.28] mm
+   Depth calibration (measured = scale x true)
+   scale 1.0042, mean error +1.11 mm
+   depth error: RMSE 1.35 mm, max 3.06 mm (78 points)
 
-3. Robustness to depth noise (calibrated K, both conditions)
-   sigma   0.0 mm  ->  RMSE   2.25 mm
-   sigma   1.0 mm  ->  RMSE   2.26 mm
-   sigma   2.0 mm  ->  RMSE   2.26 mm
-   sigma   5.0 mm  ->  RMSE   2.27 mm
-   sigma  10.0 mm  ->  RMSE   2.30 mm
+2. 3D localisation error
+   ideal K:      detected 40/40, RMSE 2.59 mm, max 3.77 mm
+   calibrated K: detected 40/40, RMSE 2.21 mm, max 4.37 mm
 
-Notes: ground truth is the ball body position from MuJoCo. Error is the straight-line
-distance between the estimated and true ball centre.
+3. Depth noise (calibrated K)
+   noise  0.0 mm -> RMSE 2.21 mm
+   noise  1.0 mm -> RMSE 2.21 mm
+   noise  2.0 mm -> RMSE 2.21 mm
+   noise  5.0 mm -> RMSE 2.23 mm
+   noise 10.0 mm -> RMSE 2.25 mm
