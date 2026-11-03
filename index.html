@@ -349,6 +349,19 @@
     <p style="margin-top:16px;">
       The bottom plot shows the Kalman filter's angle estimation RMSE. Error is lowest for the baseline (about 0.105°), higher for the disturbed case (about 0.125°) and highest with added noise (about 0.15°). The values barely change between seeds, which shows the estimator's accuracy does not depend on where the ball is placed. Across both plots, sensor noise has a larger effect than the external disturbance, but the system stays robust throughout.
     </p>
+
+
+         <h3 style="margin-top:64px; margin-bottom:8px; font-size:1.25rem; color:var(--cyan);">Graph 5: Randomised Ball Positions for Each of the 50 Seeds</h3>
+    <p>
+      The graph shows the ball’s position on the table for each of 50 randomised trials, with each point labelled by its seed number. Circles mark successful picks and crosses mark failures.
+    </p>
+    <div class="media">
+      <img src="./static/images/50 trials.png" alt="randomised ball positioning"
+           onerror="this.parentElement.style.display='none'">
+    </div>
+    <p style="margin-top:32px;">
+      In the graph above every point on the plot is a circle, meaning the robot successfully picked up the ball in all 50 trials. The ball positions cover an area of roughly 19 cm by 16 cm and are spread evenly, including positions near the edges of the table This shows that the vision, estimation and control pipeline works reliably wherever the ball is placed on the table. 
+    
     
   </div>
 </section>
