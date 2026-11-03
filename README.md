@@ -18,24 +18,31 @@ pip install mujoco numpy opencv-python matplotlib
 ```
 
 ## Run commands
-Load the scene with the look pose and a random ball position:
+Run the entire Simulation from: 
 ```
-python scene_setup.py
+SIMULATION.py
+```
+This file imports the camera calibration, the scene environment, the Kalman filter, the full Track B system movement, robustness testing, disturbance testing and generation of graphs.
+
+## Changing the tests
+At the top of SIMULATION.py, change these booleans to choose what runs:
+```
+ROBUSTNESS_TEST = False   # True runs 10 ball positions x 3 conditions (baseline, noisy, disturbed)
+                          # False runs a single pick
+DEMO_DISTURBANCE = True   # True applies a 0.5 N m torque pulse during the single pick
+SHOW_VIEWER = True        # True opens the MuJoCo window during the single pick
+WRIST_VIEW = False        # True shows the wrist camera view instead of the outside view
+SEED = 0                  # Ball position used for the single pick
 ```
 
-Run the full pick (vision → plan → grasp):
+## Where results are saved
 ```
-python Josie_snp.py
-```
-
-Evaluate vision localisation (results saved to `results/` and `evidence/`):
-```
-python evaluate_vision.py
-```
-
-Kalman filter joint-state estimation test:
-```
-python kalman_filter_test.py
+results/pick_evidence/demo_disturbed/seed_0/   # single pick: trial_data.csv, trial_analysis.png
+results/pick_evidence/                         # robustness test: robustness_results.csv,
+                                               # robustness_summary.txt, comparison_errors.png,
+                                               # ball_positions.png
+evidence/vision/                               # camera calibration graphs (only saved when
+                                               # Camera_calibration.py is run on its own)
 ```
 
 ## Contributors
