@@ -420,14 +420,58 @@
 <section class="block" id="run">
   <div class="wrap">
     <div class="label">06 — Run It</div>
-    <h2>How to Run:</h2>
-    <div class="terminal">
+    <h2>How to Run</h2>
+
+    <h3 style="margin-top:32px; font-size:1.25rem; color:var(--cyan);">Install</h3>
+    <div class="terminal" style="margin-top:16px;">
       <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
 <pre><span class="p">$ </span>git clone https://github.com/cocoplc/41014_Project.git
 <span class="p">$ </span>cd 41014_Project
-<span class="p">$ </span>pip install mujoco numpy opencv-python matplotlib
+<span class="p">$ </span>pip install mujoco numpy scipy matplotlib pillow spatialmath-python</pre>
+    </div>
 
-<span class="p">$ </span>SIMULATION.py    <span class="c"># You only need to run this one file, it imports everything needed </span>
+    <h3 style="margin-top:48px; font-size:1.25rem; color:var(--cyan);">Run the simulation</h3>
+    <p style="margin-top:8px;">
+      This one file runs the camera calibration, the scene environment, the Kalman filter, the full Track B system movement, robustness testing, disturbance testing and generation of graphs.
+    </p>
+    <div class="terminal" style="margin-top:16px;">
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
+<pre><span class="p">$ </span>python SIMULATION.py</pre>
+    </div>
+
+    <h3 style="margin-top:48px; font-size:1.25rem; color:var(--cyan);">Changing the tests</h3>
+    <p style="margin-top:8px;">
+      At the top of <span class="mono">SIMULATION.py</span>, change these booleans to choose what runs:
+    </p>
+    <div class="terminal" style="margin-top:16px;">
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
+<pre>ROBUSTNESS_TEST = False   <span class="c"># True runs 10 ball positions x 3 conditions (baseline, noisy, disturbed)</span>
+                          <span class="c"># False runs a single pick</span>
+DEMO_DISTURBANCE = True   <span class="c"># True applies a 0.5 N m torque pulse during the single pick</span>
+SHOW_VIEWER = True        <span class="c"># True opens the MuJoCo window during the single pick</span>
+WRIST_VIEW = False        <span class="c"># True shows the wrist camera view instead of the outside view</span>
+SEED = 0                  <span class="c"># Ball position used for the single pick</span></pre>
+    </div>
+
+    <h3 style="margin-top:48px; font-size:1.25rem; color:var(--cyan);">Where results are saved</h3>
+    <div class="terminal" style="margin-top:16px;">
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
+<pre>results/pick_evidence/demo_disturbed/seed_0/    <span class="c"># single pick</span>
+    trial_data.csv
+    trial_analysis.png
+
+results/pick_evidence/                          <span class="c"># robustness test</span>
+    robustness_results.csv
+    robustness_summary.txt
+    comparison_errors.png
+    ball_positions.png
+
+evidence/vision/                                <span class="c"># camera calibration graphs</span>
+    calibration_reprojection.png                <span class="c"># (only saved when Camera_calibration.py</span>
+    example_detection.png                       <span class="c">#  is run on its own)</span></pre>
+    </div>
+  </div>
+</section>
 
     </div>
   </div>
