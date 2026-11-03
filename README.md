@@ -52,6 +52,13 @@ evidence/vision/                                # camera calibration graphs
     example_detection.png                   
 ```
 
+## Use of generative AI
+AI was frequently utilised to assist in the interpretation and application of relevant theory. It was also used to assist with generating, adapting, reviewing, and debugging code, developing testing procedures, and interpreting simulation results. For example, the code used to prepare graphs from the obtained data was predominantly AI generated.
+
+With this being said, the resulting system required substantial practical development, debugging, testing, and refinement by the team. The system objectives, design choices, and implementation decisions are our own.
+
+We acknowledge that generative AI made a significant contribution to the development process, including portions of the final codebase. However, the submitted work represents the team's application, integration, evaluation and understanding of these tools and techniques, rather than the uncritical submission of AI-generated material.
+
 ## Contributors
 - Chloe Sargiss – MuJoCo scene, robot and gripper setup
 - Hannah Murphy – RGB-D vision and localisation
