@@ -1,4 +1,4 @@
-# A4_SC – UR3 Vision-Guided Pick (MuJoCo)
+#41014_Project_Group_13 – UR3 Vision-Guided Pick (MuJoCo)
 
 41014 Sensors and Control for Mechatronic Systems – Assessment 4 Integrated Project (Track B).
 A UR3 robot in MuJoCo localises a ball using a wrist-mounted RGB-D camera and picks it up with a gripper.
