@@ -1,22 +1,22 @@
-import csv
-import time
+import csv      # Saves experimental data to CSV files
+import time     # Real-time delays when viewing the simulation
 from pathlib import Path
 import mujoco
 import mujoco.viewer
 import numpy as np
-from scipy.linalg import solve_discrete_are
-from PIL import Image, ImageDraw
-import matplotlib
-matplotlib.use("Agg")
+from scipy.linalg import solve_discrete_are     # For solving the Riccati equation
+from PIL import Image, ImageDraw    # Saves images from the RGB camera and draws the detection marker on them
+import matplotlib   # Creates the graphs and plots
+matplotlib.use("Agg")   # Want to save plots to image files instead of opening MPL
 import matplotlib.pyplot as plt
-from scene_setup import reset_scene
-from vision import (WristCamera, detect_ball_camera, intrinsics_from_model, R_MJ_TO_OPT)
-from gripper import fingers_touching
+from scene_setup import reset_scene     # Calls the reset scene function
+from vision import (WristCamera, detect_ball_camera, R_MJ_TO_OPT)    # Captures RGB-S images and detects the ball
+from gripper import fingers_touching    # Determines whether the gripper fingers contact the ball
 
 
-# True runs 30 trials (ten positions, three conditions).
-# False runs one pick, with optional viewer and torque disturbance.
-ROBUSTNESS_TEST = False
+# True runs 30 trials (ten positions, three conditions)
+# False runs one pick, with optional viewer and torque disturbance
+ROBUSTNESS_TEST = True
 
 SHOW_VIEWER = True      # Show the MuJoCo window in a single run
 WRIST_VIEW = False       # True shows the wrist camera instead of the outside view
@@ -24,15 +24,14 @@ WRIST_VIEW = False       # True shows the wrist camera instead of the outside vi
 # Apply the same external torque during a single demonstration.
 DEMO_DISTURBANCE = True
 
-# Ball position for a single demonstration.
+# Ball position for a single demonstration
 SEED = 0
 
-# Ball positions used for robustness testing.
+# Ball positions used for robustness testing
 TEST_SEEDS = range(10)
 
-# Test the same ten ball positions under three different conditions.
-# The noisy condition has 1.5 times the baseline encoder noise.
-# The disturbance is an external torque, not a force.
+# Test the same ten ball positions under three different conditions
+# The noisy condition has 1.5 times the baseline encoder noise
 CONDITIONS = {
     "baseline": {"encoder_std": 0.005, "torque_Nm": 0.0},
 
@@ -41,11 +40,11 @@ CONDITIONS = {
     "disturbed": {"encoder_std": 0.005, "torque_Nm": 0.5}
 }
 
-# Apply a short torque pulse to the wrist during the approach.
+# Apply a short torque pulse to the wrist during the approach
 DISTURBANCE_START = 2.0
 DISTURBANCE_END = 2.2
 
-# Apply it about the positive world Y axis.
+# Apply it about the positive world Y axis
 DISTURBANCE_DIRECTION = np.array([0.0, 1.0, 0.0])
 
 DT = 0.01                     # Controller update interval: 0.01 s (100 Hz)
@@ -63,7 +62,10 @@ FOLDER = Path(__file__).resolve().parent  # Find scene.xml beside this script
 RESULTS = FOLDER / "results" / "pick_evidence"  # Save graphs and CSVs here
 
 
-
+"""
+Runs one pick using the chosen ball position, encoder noise, and torque
+Returns the trial results, saving detailed evidence for selected trials
+"""
 def run_trial(
     seed,
     condition,
@@ -71,32 +73,23 @@ def run_trial(
     torque_Nm,
     show_viewer=False
 ):
-    """
-    Run one pick using the chosen ball position, encoder noise and torque.
-    Return the trial results, saving detailed evidence for selected trials.
-    """
 
     output = RESULTS / condition / f"seed_{seed}"
 
-    # Save per-timestep evidence for single demonstrations and seed 0 of each batch.
-    # The other 27 batch runs contribute only to the shared summary CSV.
+    # Save per-timestep evidence for single demonstrations and seed 0 of each batch
+    # The other 27 batch runs contribute only to the shared summary CSV
     save_evidence = (not ROBUSTNESS_TEST) or seed == 0
     if save_evidence:
         output.mkdir(parents=True, exist_ok=True)
         first_photo = output / "wrist_camera_first_detection.png"
         if first_photo.exists():
-            first_photo.unlink()        # Avoid reusing an old camera screenshot.
+            first_photo.unlink()        # Avoids reusing an old camera screenshot
 
-    print(
-        f"\n=== {condition.upper()} | seed {seed} ===",
-        flush=True
-    )
+    print(f"\n=== {condition.upper()} | seed {seed} ===", flush=True)
 
     # Chloe's reset function places the robot in its look pose
     # and randomly positions the ball using the supplied seed.
-    model = mujoco.MjModel.from_xml_path(
-        str(FOLDER / "scene.xml")
-    )
+    model = mujoco.MjModel.from_xml_path(str(FOLDER / "scene.xml"))
 
     # Create a fresh simulation state so each seed starts independently.
     data = mujoco.MjData(model)
@@ -122,16 +115,16 @@ def run_trial(
         "wrist_3"
     ]
 
-    # Find where MuJoCo stores the six joint positions.
+    # Finds where MuJoCo stores the six joint positions.
     q_id = np.array([model.joint(name).qposadr[0] for name in joint_names])
 
-    # Find where MuJoCo stores the six joint velocities.
+    # Finds where MuJoCo stores the six joint velocities.
     v_id = np.array([model.joint(name).dofadr[0] for name in joint_names])
 
-    # Map motor names onto the actuator indices used for torque commands.
+    # Maps motor names onto the actuator indices used for torque commands.
     motor_id = np.array([model.actuator(name).id for name in motor_names])
 
-    # Map each encoder name onto its sensor-data index.
+    # Maps each encoder name onto its sensor-data index.
     encoder_id = np.array([model.sensor("encoder_" + name).adr[0] for name in joint_names])
 
     gripper_id = model.actuator("gripper_fingers_actuator").id
@@ -142,43 +135,9 @@ def run_trial(
     # Calculate the number of physics updates per controller step.
     physics_steps = round(DT / model.opt.timestep)
 
-    if not np.isclose(
-        physics_steps * model.opt.timestep,
-        DT
-    ):
-        raise ValueError(
-            "Controller timestep must match physics timestep"
-        )
-
     # Apply the external torque to a wrist link.
     # Look for the first matching body name in the UR3e model.
-    disturbance_body = None
-
-    for name in (
-        "wrist_3_link",
-        "wrist_2_link",
-        "forearm_link"
-    ):
-
-        body_id = mujoco.mj_name2id(
-            model,
-            mujoco.mjtObj.mjOBJ_BODY,
-            name
-        )
-
-        if body_id != -1:
-            disturbance_body = body_id
-            break
-
-    # Use the attachment site's body if those names differ
-    # in the model.
-    if disturbance_body is None:
-        disturbance_body = int(model.site_bodyid[site_id])
-
-    print(
-        "Disturbance body:",
-        model.body(disturbance_body).name
-    )
+    disturbance_body = model.body("wrist_3_link").id
 
     """STATE-SPACE MODEL AND LQR"""
 
@@ -200,11 +159,9 @@ def run_trial(
 
     # Test controllability and observability.
     controllability = np.hstack((B,A @ B))
-
     observability = np.vstack((C, C @ A))
 
     print("Controllability rank:", np.linalg.matrix_rank(controllability))
-
     print("Observability rank:", np.linalg.matrix_rank(observability))
 
     # LQR weighting matrices.
@@ -309,7 +266,6 @@ def run_trial(
     saturated_steps = 0
 
     disturbance_seen = False
-    previous_disturbance_active = False
 
     last_print = -1
 
@@ -560,21 +516,11 @@ def run_trial(
             torque = (arm_mass @ acceleration + estimated_data.qfrc_bias[v_id])
 
             # Apply motor torque limits.
-            clipped = False
+            original_torque = torque.copy()
 
-            for j, motor in enumerate(motor_id):
-                if model.actuator_ctrllimited[motor]:
+            torque = np.clip(torque, model.actuator_ctrlrange[motor_id, 0], model.actuator_ctrlrange[motor_id, 1])
 
-                    low, high = (model.actuator_ctrlrange[motor])
-
-                    original = torque[j]
-
-                    torque[j] = np.clip(original, low, high)
-
-                    if torque[j] != original:
-                        clipped = True
-
-            if clipped:
+            if np.any(torque != original_torque):
                 saturated_steps += 1
 
             # Send the control inputs to the actual simulated arm and gripper.
@@ -595,24 +541,6 @@ def run_trial(
             if disturbance_active:
                 data.xfrc_applied[disturbance_body, 3:6] = torque_Nm * DISTURBANCE_DIRECTION
                 disturbance_seen = True
-
-            # Print when the torque begins and ends.
-            if disturbance_active and not previous_disturbance_active:
-
-                print(
-                    f"{data.time:.2f}s: "
-                    f"TORQUE ON ({torque_Nm:.1f} N m, world +Y)",
-                    flush=True
-                )
-
-            if previous_disturbance_active and not disturbance_active:
-
-                print(
-                    f"{data.time:.2f}s: TORQUE OFF",
-                    flush=True
-                )
-
-            previous_disturbance_active = disturbance_active
 
             """Recording the Results"""
 
