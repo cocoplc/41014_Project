@@ -13,7 +13,6 @@ from scene_setup import reset_scene     # Calls the reset scene function
 from vision import (WristCamera, detect_ball_camera, R_MJ_TO_OPT)    # Captures RGB-S images and detects the ball
 from gripper import fingers_touching    # Determines whether the gripper fingers contact the ball
 
-
 # True runs 30 trials (ten positions, three conditions)
 # False runs one pick, with optional viewer and torque disturbance
 ROBUSTNESS_TEST = True
@@ -115,16 +114,16 @@ def run_trial(
         "wrist_3"
     ]
 
-    # Finds where MuJoCo stores the six joint positions.
+    # Finds where MuJoCo stores the six joint positions
     q_id = np.array([model.joint(name).qposadr[0] for name in joint_names])
 
-    # Finds where MuJoCo stores the six joint velocities.
+    # Finds where MuJoCo stores the six joint velocities
     v_id = np.array([model.joint(name).dofadr[0] for name in joint_names])
 
-    # Maps motor names onto the actuator indices used for torque commands.
+    # Maps motor names onto the actuator indices used for torque commands
     motor_id = np.array([model.actuator(name).id for name in motor_names])
 
-    # Maps each encoder name onto its sensor-data index.
+    # Maps each encoder name onto its sensor-data index
     encoder_id = np.array([model.sensor("encoder_" + name).adr[0] for name in joint_names])
 
     gripper_id = model.actuator("gripper_fingers_actuator").id
@@ -132,18 +131,18 @@ def run_trial(
     camera_id = model.camera("wrist_camera").id
     ball_id = model.body("target_ball_body").id
 
-    # Calculate the number of physics updates per controller step.
+    # Calculate the number of physics updates per controller step
     physics_steps = round(DT / model.opt.timestep)
 
-    # Apply the external torque to a wrist link.
-    # Look for the first matching body name in the UR3e model.
+    # Apply the external torque to a wrist link
+    # Look for the first matching body name in the UR3e model
     disturbance_body = model.body("wrist_3_link").id
 
     """STATE-SPACE MODEL AND LQR"""
 
-    # State = [joint angle, joint angular velocity].
-    # Input = joint angular acceleration.
-    # Measurement = encoder joint angle.
+    # State = [joint angle, joint angular velocity]
+    # Input = joint angular acceleration
+    # Measurement = encoder joint angle
 
     A = np.array([
         [1, DT],
@@ -157,7 +156,7 @@ def run_trial(
 
     C = np.array([[1, 0]])
 
-    # Test controllability and observability.
+    # Test controllability and observability
     controllability = np.hstack((B,A @ B))
     observability = np.vstack((C, C @ A))
 
@@ -168,40 +167,40 @@ def run_trial(
     Q = np.diag([100.0, 10.0])    # Penalise angle error and velocity error
     R = np.array([[1.0]])         # Penalise large acceleration commands
 
-    # Solve the discrete Riccati equation for the LQR feedback law.
+    # Solves the discrete Riccati equation for the LQR feedback law
     P_lqr = solve_discrete_are(A, B, Q, R)
 
-    # Calculate the two feedback gains: angle error and velocity error.
+    # Calculates the two feedback gains: angle error and velocity error
     K = np.linalg.solve(R + B.T @ P_lqr @ B, B.T @ P_lqr @ A).ravel()
 
     print("LQR gain:", K)
 
     """Kalman Filter"""
-    # encoder_std comes from the selected experiment.
-    # The Kalman measurement covariance changes with it.
+    # encoder_std comes from the selected experiment
+    # The Kalman measurement covariance changes with it
     acceleration_std = 0.5
 
-    # Encoder measurement covariance is variance = standard deviation squared.
+    # Encoder measurement covariance is variance = standard deviation squared
     R_noise = np.array([[encoder_std**2]])
 
-    # Process covariance describes uncertainty in the acceleration model.
+    # Process covariance describes uncertainty in the acceleration model
     Q_noise = (acceleration_std**2 * (B @ B.T) + 1e-10 * np.eye(2))
 
-    # One estimated angle and angular velocity for each of the six joints.
+    # One estimated angle and angular velocity for each of the six joints
     estimate = np.zeros((6, 2))
 
-    # Initialise the angle estimates from encoders; velocity starts at zero.
+    # Initialise the angle estimates from encoders; velocity starts at zero
     estimate[:, 0] = data.sensordata[encoder_id]
 
-    # Covariance matrices for all six Kalman filters.
+    # Covariance matrices for all six Kalman filters
     P = np.repeat(np.diag([0.1**2, 0.5**2])[None], 6, axis=0)
 
     previous_acceleration = np.zeros(6)
 
-    # Keep the random samples repeatable between trials.
+    # Keep the random samples repeatable between trials
     rng = np.random.default_rng(42)
 
-    # Separate data object for computing kinematics and dynamics from estimates.
+    # Separate data object for computing kinematics and dynamics from estimates
     estimated_data = mujoco.MjData(model)
 
     estimated_data.qpos[:] = model.qpos0
@@ -209,7 +208,7 @@ def run_trial(
 
     mujoco.mj_forward(model, estimated_data)
 
-    # Prepare the dense inertia matrix for computed torque control.
+    # Prepare the dense inertia matrix for computed torque control
     mass_matrix = np.zeros((model.nv, model.nv))
 
     """Camera and Gripper"""
@@ -220,17 +219,17 @@ def run_trial(
 
     camera = WristCamera(model)
 
-    # Calculate the midpoint between the open gripper pads.
+    # Calculate the midpoint between the open gripper pads
     site_R = estimated_data.site_xmat[site_id].reshape(3, 3).copy()
     site_position = estimated_data.site_xpos[site_id].copy()
     left_pad = estimated_data.body("gripper_left_pad").xpos
     right_pad = estimated_data.body("gripper_right_pad").xpos
     finger_midpoint = (left_pad + right_pad) / 2
 
-    # Express the finger midpoint offset relative to the tool frame.
+    # Express the finger midpoint offset relative to the tool frame
     finger_offset = (site_R.T @ (finger_midpoint - site_position))
 
-    # Maintain the original gripper orientation.
+    # Maintain the original gripper orientation
     start_orientation = site_R.copy()
 
     """Movement Stages"""
@@ -251,11 +250,11 @@ def run_trial(
 
     stop_reason = "Maximum simulation time"
 
-    # Ground truth for evaluating the final pick only.
+    # Ground truth for evaluating the final pick only
     ball_start = data.xpos[ball_id].copy()
 
-    # Collect evaluation data separately from the controller commands.
-    records = []  # Time history is saved only for demonstration/representative trials.
+    # Collect evaluation data separately from the controller commands
+    records = []  # Time history is saved only for demonstration/representative trials
 
     angle_errors = []
     velocity_errors = []
@@ -297,32 +296,32 @@ def run_trial(
 
             mujoco.mj_forward(model, data)
 
-            # -----------------------------------------------
-            # 1. KALMAN FILTER
-            # -----------------------------------------------
+            """
+            Kalman Filter
+            """
 
-            # Read the encoders and add noise; never use true qpos for control.
+            # Read the encoders and add noise; never use true qpos for control
             measurements = (data.sensordata[encoder_id].copy() + rng.normal(0, encoder_std, 6))
 
             for j in range(6):
 
-                # Predict the angle and angular velocity.
+                # Predict the angle and angular velocity
                 x_previous = estimate[j].reshape(2, 1)
 
                 x_pred = (A @ x_previous + B * previous_acceleration[j])
 
-                # Predict how uncertain the state estimate has become.
+                # Predict how uncertain the state estimate has become
                 P_pred = (A @ P[j] @ A.T + Q_noise)
 
-                # Innovation is the difference between measured and predicted angle.
+                # Innovation is the difference between measured and predicted angle
                 innovation = (measurements[j] - (C @ x_pred).item())
 
                 S = (C @ P_pred @ C.T + R_noise)
 
-                # Calculate how much the measurement should correct the prediction.
+                # Calculate how much the measurement should correct the prediction
                 kalman_gain = np.linalg.solve(S, C @ P_pred).T
 
-                # Correct the predicted angle and angular velocity.
+                # Correct the predicted angle and angular velocity
                 x_corrected = (x_pred + kalman_gain * innovation)
 
                 estimate[j] = x_corrected.flatten()
@@ -330,7 +329,7 @@ def run_trial(
                 # Update uncertainty.
                 I = np.eye(2)
 
-                # Joseph covariance update keeps the uncertainty matrix stable.
+                # Joseph covariance update keeps the uncertainty matrix stable
                 P[j] = (
                     (I - kalman_gain @ C)
                     @ P_pred
@@ -340,7 +339,7 @@ def run_trial(
                     @ kalman_gain.T
                 )
 
-            # Calculate estimated robot kinematics.
+            # Calculate estimated robot kinematics
             estimated_data.qpos[q_id] = estimate[:, 0]
 
             estimated_data.qvel[:] = 0
@@ -351,7 +350,7 @@ def run_trial(
 
             current_R = estimated_data.site_xmat[site_id].reshape(3, 3)
 
-            # Estimated world position of the midpoint between the fingers.
+            # Estimated world position of the midpoint between the fingers
             finger_position = (estimated_data.site_xpos[site_id] + current_R @ finger_offset)
 
             """RGB-D Camera"""
@@ -362,8 +361,8 @@ def run_trial(
 
                 point_camera, pixel = detect_ball_camera(rgb, depth, camera_matrix)
 
-                # Only keep the first valid RGB-D detection for demonstration evidence.
-                # The camera is still captured and processed normally for every trial.
+                # Only keep the first valid RGB-D detection for demonstration evidence
+                # The camera is still captured and processed normally for every trial
                 if save_evidence and point_camera is not None and not first_photo.exists():
                     picture = Image.fromarray(rgb)
                     if pixel is not None:
@@ -372,22 +371,22 @@ def run_trial(
                     picture.save(first_photo)
 
                 if point_camera is not None:
-                    # Camera-to-world transformation.
-                    # Uses estimated camera pose.
+                    # Camera-to-world transformation
+                    # Uses estimated camera pose
                     R_wc = (estimated_data.cam_xmat[camera_id].reshape(3, 3) @ R_MJ_TO_OPT)
 
                     camera_position = (estimated_data.cam_xpos[camera_id])
 
-                    # Transform the ball from optical camera coordinates into world position.
+                    # Transform the ball from optical camera coordinates into world position
                     detected_ball = (camera_position + R_wc @ point_camera)
 
-                    # Camera localisation error for EVALUATION.
-                    # This value is never used for planning.
+                    # Camera localisation error for EVALUATION
+                    # This value is never used for planning
                     true_ball = data.xpos[ball_id].copy()
 
                     camera_errors.append(np.linalg.norm(detected_ball - true_ball) * 1000)
 
-                    # Smooth the camera position measurement.
+                    # Smooth the camera position measurement
                     if ball_estimate is None:
                         ball_estimate = detected_ball
                     else:
@@ -412,18 +411,18 @@ def run_trial(
                 goal = lift_target
 
             if goal is not None:
-                # Difference between desired and estimated finger position.
+                # Difference between desired and estimated finger position
                 position_error = (goal - finger_position)
 
                 distance = np.linalg.norm(position_error)
 
-                # Small-angle orientation error keeps the gripper pointing down.
+                # Small-angle orientation error keeps the gripper pointing down
                 rotation_error = 0.5 * sum((np.cross(current_R[:, i], start_orientation[:, i]) for i in range(3)), np.zeros(3))
 
-                # Desired Cartesian velocity.
+                # Desired Cartesian velocity
                 desired_velocity = np.concatenate((0.65 * position_error, 0.55 * rotation_error))
 
-                # Jacobian at the finger midpoint.
+                # Jacobian at the finger midpoint
                 jacp = np.zeros((3, model.nv))
                 jacr = np.zeros((3, model.nv))
 
@@ -431,26 +430,26 @@ def run_trial(
 
                 J = np.vstack((jacp[:, v_id], jacr[:, v_id]))
 
-                # Damped least-squares inverse Jacobian.
+                # Damped least-squares inverse Jacobian
                 damping = 0.06
 
-                # Damped least squares converts Cartesian velocity to joint velocity.
+                # Damped least squares converts Cartesian velocity to joint velocity
                 qdot_target = (J.T @ np.linalg.solve(J @ J.T + damping**2 * np.eye(6), desired_velocity))
 
-                # Limit joint velocities.
+                # Limit joint velocities
                 peak_speed = np.max(np.abs(qdot_target))
 
                 if peak_speed > MAX_SPEED:
 
                     qdot_target *= (MAX_SPEED / peak_speed)
 
-                # Keep the desired position close to the estimated joint position.
+                # Keep the desired position close to the estimated joint position
                 q_target = np.clip(q_target, estimate[:, 0] - MAX_LAG, estimate[:, 0] + MAX_LAG)
 
-                # Integrate desired joint velocity to update the joint position reference.
+                # Integrate desired joint velocity to update the joint position reference
                 q_target += qdot_target * DT
 
-                # Check whether the stage is complete.
+                # Check whether the stage is complete
                 if (stage == "APPROACH" and distance < 0.008):
                     stage = "DESCEND"
 
@@ -461,7 +460,7 @@ def run_trial(
                     stage = "HOLD"
 
             else:
-                # Hold current position when not moving.
+                # Hold current position when not moving
                 qdot_target[:] = 0
 
                 q_target = np.clip(q_target, estimate[:, 0] - MAX_LAG, estimate[:, 0] + MAX_LAG)
@@ -479,12 +478,12 @@ def run_trial(
                 else:
                     touch_steps = 0
 
-                # Both fingers must maintain contact.
+                # Both fingers must maintain contact
                 if touch_steps >= 40:
                     lift_target = (finger_position + np.array([0, 0, LIFT_HEIGHT]))
                     stage = "LIFT"
 
-            # Hold the object for 1.5 seconds.
+            # Hold the object for 1.5 seconds
             if (old_stage == "HOLD" and data.time - stage_start >= 1.5):
                 stage = "DONE"
                 stop_reason = "Sequence completed"
@@ -504,18 +503,18 @@ def run_trial(
 
             error = estimate - desired_states
 
-            # LQR turns the estimated state error into desired acceleration.
+            # LQR turns the estimated state error into desired acceleration
             acceleration = -(error @ K)
 
-            # Robot inertia matrix.
+            # Robot inertia matrix
             mujoco.mj_fullM(model, estimated_data, mass_matrix)
 
             arm_mass = mass_matrix[np.ix_(v_id, v_id)]
 
-            # Computed torque compensates for robot inertia and bias forces.
+            # Computed torque compensates for robot inertia and bias forces
             torque = (arm_mass @ acceleration + estimated_data.qfrc_bias[v_id])
 
-            # Apply motor torque limits.
+            # Apply motor torque limits
             original_torque = torque.copy()
 
             torque = np.clip(torque, model.actuator_ctrlrange[motor_id, 0], model.actuator_ctrlrange[motor_id, 1])
@@ -523,7 +522,7 @@ def run_trial(
             if np.any(torque != original_torque):
                 saturated_steps += 1
 
-            # Send the control inputs to the actual simulated arm and gripper.
+            # Send the control inputs to the actual simulated arm and gripper
             data.ctrl[motor_id] = torque
             data.ctrl[gripper_id] = gripper_command
 
@@ -531,11 +530,11 @@ def run_trial(
 
             """Physical Disturbance"""
 
-            # Entries 3:6 are a torque in N m, expressed in world axes.
-            # It acts on the simulated wrist without being given to the observer.
+            # Entries 3:6 are a torque in N m, expressed in world axes
+            # It acts on the simulated wrist without being given to the observer
             disturbance_active = (torque_Nm > 0 and DISTURBANCE_START <= data.time < DISTURBANCE_END and stage == "APPROACH")
 
-            # Reset the applied torque outside the disturbance interval.
+            # Reset the applied torque outside the disturbance interval
             data.xfrc_applied[disturbance_body, :] = 0
 
             if disturbance_active:
@@ -544,8 +543,8 @@ def run_trial(
 
             """Recording the Results"""
 
-            # Ground truth is used ONLY to calculate errors for evaluation.
-            # Neither the planner nor the controller reads these states.
+            # Ground truth is used ONLY to calculate errors for evaluation
+            # Neither the planner nor the controller reads these states
             true_q = data.qpos[q_id].copy()
             true_dq = data.qvel[v_id].copy()
 
@@ -557,10 +556,10 @@ def run_trial(
 
             max_torque = max(max_torque, float(np.max(np.abs(torque))))
 
-            # True ball lift is an evaluation measurement.
+            # True ball lift is an evaluation measurement
             ball_lift = 1000 * (data.xpos[ball_id, 2] - ball_start[2])
 
-            # Record the true state, estimate and uncertainty for selected plots.
+            # Record the true state, estimate and uncertainty for selected plots
             if save_evidence:
                 records.append({
                     "time_s": float(data.time),
@@ -578,7 +577,7 @@ def run_trial(
                     "max_torque_Nm": float(np.max(np.abs(torque)))
                 })
 
-            # Advance the physics simulation.
+            # Advance the physics simulation
             for _ in range(physics_steps):
                 mujoco.mj_step(model, data)
 
@@ -649,7 +648,7 @@ def run_trial(
 
     lifted_mm = 1000 * (ball_final[2] - ball_start[2])
 
-    # Require completion, at least 60 mm lift, and both fingers still touching.
+    # Require completion, at least 60 mm lift, and both fingers still touching
     success = (stage == "DONE" and lifted_mm > 60 and left_touch and right_touch)
 
     angle_errors = np.array(angle_errors)
@@ -664,8 +663,12 @@ def run_trial(
 
     peak_tracking = float(np.rad2deg(np.max(np.abs(tracking_errors))))
 
-    # Save full time-history evidence only for demonstration or representative trials.
-    # The plot shows true state, Kalman estimate, uncertainty and joint tracking together.
+    """
+    Trial Data Export and Graphing (Largely AI generated)
+    """
+
+    # Save full time-history evidence only for demonstration or representative trials
+    # The plot shows true state, Kalman estimate, uncertainty and joint tracking together
     if save_evidence and records:
         with (output / "trial_data.csv").open("w", newline="") as file:
             writer = csv.DictWriter(file, fieldnames=list(records[0].keys()))
@@ -758,7 +761,7 @@ def save_comparison(trials):
 
     RESULTS.mkdir(parents=True, exist_ok=True)
 
-    # One CSV contains all results, including success, lift and error measurements.
+    # One CSV contains all results, including success, lift and error measurements
     with (RESULTS / "robustness_results.csv").open("w", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=list(trials[0].keys()))
         writer.writeheader()
@@ -791,8 +794,8 @@ def save_comparison(trials):
     (RESULTS / "robustness_summary.txt").write_text(report_text)
     print("\n" + report_text, flush=True)
 
-    # Compare state-estimation accuracy and trajectory tracking separately.
-    # Plot each seed for all three conditions so variability is visible.
+    # Compare state-estimation accuracy and trajectory tracking separately
+    # Plot each seed for all three conditions so variability is visible
     fig, axes = plt.subplots(2, 1, figsize=(9, 8), sharex=True)
 
     comparisons = [
@@ -816,7 +819,7 @@ def save_comparison(trials):
     fig.savefig(RESULTS / "comparison_errors.png", dpi=160)
     plt.close(fig)
 
-    # Show that different seeds really produced different ball positions.
+    # Show that different seeds really produced different ball positions
     baseline = [r for r in trials if r["condition"] == "baseline"]
     plt.figure(figsize=(7, 5))
 
@@ -864,7 +867,7 @@ if __name__ == "__main__":
         save_comparison(trials)
 
     else:
-        # Demonstrate the same 0.5 N m torque pulse used in the batch.
+        # Demonstrate the same 0.5 N m torque pulse
         disturbance_torque = (CONDITIONS["disturbed"]["torque_Nm"] if DEMO_DISTURBANCE else 0.0)
 
         condition = ("demo_disturbed" if DEMO_DISTURBANCE else "demo_baseline")
